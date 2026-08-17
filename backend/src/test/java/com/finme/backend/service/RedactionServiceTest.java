@@ -48,4 +48,53 @@ class RedactionServiceTest {
     void handlesNullInput() {
         assertThat(redactionService.redact(null)).isEmpty();
     }
+
+    @Test
+    void stripsSpaceSeparatedDigitRuns() {
+        String result = redactionService.redact("Account ref 1234 5678 90 on file");
+
+        assertThat(result).doesNotContain("1234 5678 90");
+    }
+
+    @Test
+    void stripsDashSeparatedDigitRuns() {
+        String result = redactionService.redact("Contact 012-345-6789 for queries");
+
+        assertThat(result).doesNotContain("012-345-6789");
+    }
+
+    @Test
+    void stripsLabeledSsnLine() {
+        String result = redactionService.redact("SSN: 123-45-6789");
+
+        assertThat(result).doesNotContain("123-45-6789");
+    }
+
+    @Test
+    void stripsLabeledPassportNumberLine() {
+        String result = redactionService.redact("Passport Number: A1234567");
+
+        assertThat(result).doesNotContain("A1234567");
+    }
+
+    @Test
+    void stripsLabeledTaxReferenceLine() {
+        String result = redactionService.redact("Tax Reference: 1234567890");
+
+        assertThat(result).doesNotContain("1234567890");
+    }
+
+    @Test
+    void stripsLabeledIbanLine() {
+        String result = redactionService.redact("IBAN: GB29NWBK60161331926819");
+
+        assertThat(result).doesNotContain("GB29NWBK60161331926819");
+    }
+
+    @Test
+    void leavesTransactionAmountsIntactEvenWithWidenedDigitRunPattern() {
+        String line = "14/01/2026   Uber   R85.50\n12/01/2026   Woolworths Sandton   R12,450.00";
+
+        assertThat(redactionService.redact(line)).isEqualTo(line);
+    }
 }
