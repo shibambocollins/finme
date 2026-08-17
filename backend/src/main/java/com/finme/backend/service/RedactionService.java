@@ -21,13 +21,19 @@ public class RedactionService {
     // drop the whole line rather than trying to preserve part of it.
     private static final Pattern LABELED_PII_LINE = Pattern.compile(
             "(?im)^.*\\b(account\\s*(no\\.?|number|holder(\\s*name)?)|acc\\s*no\\.?|" +
-                    "id(entity)?\\s*number|client\\s*name|customer\\s*name)\\s*[:\\-].*$"
+                    "id(entity)?\\s*number|client\\s*name|customer\\s*name|ssn|" +
+                    "passport\\s*(no\\.?|number)|tax\\s*(ref(erence)?|number)|iban)\\s*[:\\-].*$"
     );
 
-    // Catches stray account/phone/branch-code-like digit runs that appear without a label.
-    // Transaction amounts and dates in statement text don't reach 8 consecutive digits, so
-    // this does not clip legitimate transaction data.
-    private static final Pattern LONG_DIGIT_RUN = Pattern.compile("\\b\\d{8,}\\b");
+    // Catches stray account/phone/branch-code-like digit runs that appear without a label,
+    // tolerating a single space or dash between digit groups (e.g. "123-456-7890",
+    // "1234 5678 90") since real account/phone numbers are often formatted that way and a
+    // strict \d{8,} misses them entirely. Dates (12/01/2026) and amounts (R450.00 or
+    // R12,450.00) use slashes/periods/commas as separators, not spaces or dashes, so those
+    // stay intact. Known limitation: a space-grouped amount of R10,000,000+ could still be
+    // over-redacted - an accepted heuristic tradeoff, same as the duplicate-detection edge
+    // case in docs/06-risk-register.md.
+    private static final Pattern LONG_DIGIT_RUN = Pattern.compile("\\b\\d(?:[\\s-]?\\d){7,}\\b");
 
     public String redact(String rawText) {
         if (rawText == null) {
