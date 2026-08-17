@@ -21,9 +21,15 @@ class AiExtractionSupportTest {
 
         List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
 
-        assertThat(result).containsExactly(
-                new ExtractedTransaction(LocalDate.of(2026, 1, 12), "Woolworths",
-                        new BigDecimal("450.00"), "Groceries", "desc"));
+        // BigDecimal via a JSON number carries no guaranteed scale ("450.00" and "450.0" are
+        // the same JSON number) - compare by value (compareTo), not by strict equals().
+        assertThat(result).hasSize(1);
+        ExtractedTransaction transaction = result.get(0);
+        assertThat(transaction.date()).isEqualTo(LocalDate.of(2026, 1, 12));
+        assertThat(transaction.merchant()).isEqualTo("Woolworths");
+        assertThat(transaction.amount()).isEqualByComparingTo("450.00");
+        assertThat(transaction.category()).isEqualTo("Groceries");
+        assertThat(transaction.description()).isEqualTo("desc");
     }
 
     @Test

@@ -106,11 +106,16 @@ final class AiExtractionSupport {
         try {
             LocalDate date = LocalDate.parse(node.get("date").asText());
             String merchant = node.get("merchant").asText();
-            BigDecimal amount = new BigDecimal(node.get("amount").asText());
+            // decimalValue(), not asText()+new BigDecimal(String) - avoids routing a monetary
+            // amount through a JSON-number's double representation, which can lose precision.
+            JsonNode amountNode = node.get("amount");
+            BigDecimal amount = amountNode.isTextual()
+                    ? new BigDecimal(amountNode.asText())
+                    : amountNode.decimalValue();
             String category = node.has("category") ? node.get("category").asText() : null;
             String description = node.has("description") ? node.get("description").asText() : null;
             return new ExtractedTransaction(date, merchant, amount, category, description);
-        } catch (DateTimeParseException | NumberFormatException | NullPointerException ex) {
+        } catch (DateTimeParseException | NumberFormatException | ArithmeticException | NullPointerException ex) {
             // Skip a malformed entry rather than guess at bad financial data - the rest of
             // the batch is still usable.
             return null;
