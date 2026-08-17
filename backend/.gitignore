@@ -4,6 +4,10 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Environment variables - never commit real values, .env.example documents required keys
+.env
+.env.local
+
 ### STS ###
 .apt_generated
 .classpath
