@@ -26,7 +26,8 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    // Nullable - a user who only ever logged in via Google OAuth has no password of their own.
+    @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "created_at", nullable = false, updatable = false)
