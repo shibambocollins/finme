@@ -41,10 +41,28 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        // A Google-only account has no password hash to check against - reject cleanly
+        // rather than NPE-ing inside passwordEncoder.matches.
+        if (user.getPasswordHash() == null
+                || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
 
         return new AuthResponse(jwtService.issueToken(user.getId(), user.getEmail()), user.getEmail());
+    }
+
+    /**
+     * Google OAuth login (docs/03-system-design.md: "both paths converge on the same token
+     * scheme"). Matched by email - an existing password-registered account is authenticated
+     * into directly, not duplicated; a first-time OAuth login creates a User with no password
+     * hash.
+     */
+    public User findOrCreateOAuthUser(String email) {
+        return userRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setEmail(email);
+                    return userRepository.save(user);
+                });
     }
 }
