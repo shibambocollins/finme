@@ -1,6 +1,7 @@
 package com.finme.backend.service;
 
 import com.finme.backend.ai.AiProvider;
+import com.finme.backend.ai.AllAiProvidersFailedException;
 import com.finme.backend.ai.ExtractedTransaction;
 import com.finme.backend.entity.BankStatement;
 import com.finme.backend.entity.PaymentMethod;
@@ -59,7 +60,7 @@ public class StatementIngestionService {
             }
 
             statement.setStatus(StatementStatus.COMPLETE);
-        } catch (IOException ex) {
+        } catch (IOException | AllAiProvidersFailedException ex) {
             statement.setStatus(StatementStatus.FAILED);
             bankStatementRepository.save(statement);
             throw new StatementProcessingException(statement.getId(), ex);
