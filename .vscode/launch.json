@@ -1,0 +1,13 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "FinMe Backend",
+            "request": "launch",
+            "mainClass": "com.finme.backend.BackendApplication",
+            "projectName": "backend",
+            "envFile": "${workspaceFolder}/backend/.env"
+        }
+    ]
+}
