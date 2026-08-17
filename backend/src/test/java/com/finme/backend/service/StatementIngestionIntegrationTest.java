@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
@@ -27,7 +26,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * number and ID number never reach the "AI" call. That's the concrete check behind NFR-2 and
  * Test Plan Sec. 3.
  */
-@SpringBootTest
+// ai.provider is deliberately neither "mock" nor "chain" here, so MockAiProvider and the real
+// provider chain both stay inactive and CapturingAiProvider below is the sole AiProvider bean
+// - no @Primary needed, and no ambiguity against MockAiProvider's own @Primary.
+@SpringBootTest(properties = "ai.provider=test-capturing")
 class StatementIngestionIntegrationTest {
 
     @Autowired
@@ -42,7 +44,6 @@ class StatementIngestionIntegrationTest {
     @TestConfiguration
     static class TestAiConfig {
         @Bean
-        @Primary
         CapturingAiProvider capturingAiProvider() {
             return new CapturingAiProvider();
         }
