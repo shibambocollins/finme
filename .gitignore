@@ -1,0 +1,4 @@
+# Root-level ignores; backend/ and frontend/ have their own more specific .gitignore files.
+.idea/
+.DS_Store
+Thumbs.db
