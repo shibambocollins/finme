@@ -1,6 +1,7 @@
 package com.finme.backend.ai;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -8,14 +9,15 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Deterministic stand-in for a real provider call. Lets the full ingestion pipeline
- * (extract -> redact -> structure -> persist) be built and tested end-to-end before a Groq
- * API key exists (see docs/07-tech-stack.md - AI provider is an open implementation choice
- * pending real key + rate-limit testing). Active by default; a GroqProvider implementing the
- * same AiProvider interface, selected via ai.provider=groq, is a fast-follow once a key exists
- * - never call an unverified provider API from here in the meantime.
+ * Deterministic stand-in for a real provider call, so the full ingestion pipeline
+ * (extract -> redact -> structure -> persist) can be built and tested without spending real
+ * API quota on every run. Active by default and whenever ai.provider is unset or "mock"; set
+ * ai.provider=chain (see AiProviderConfig) to route through the real Groq/OpenRouter/
+ * Cloudflare fallback chain instead. The two conditions are mutually exclusive on the same
+ * property, so there's never bean ambiguity for a plain AiProvider injection point.
  */
 @Component
+@Primary
 @ConditionalOnProperty(name = "ai.provider", havingValue = "mock", matchIfMissing = true)
 public class MockAiProvider implements AiProvider {
 
