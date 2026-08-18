@@ -21,7 +21,7 @@ final class AiExtractionSupport {
     private AiExtractionSupport() {
     }
 
-    static String buildPrompt(String redactedText) {
+    static String buildStatementPrompt(String redactedText) {
         return "You are a financial transaction extraction assistant. Given raw bank statement "
                 + "text, extract every distinct transaction you can find. Respond with ONLY a "
                 + "JSON object of this exact shape, and nothing else - no markdown, no "
@@ -32,6 +32,26 @@ final class AiExtractionSupport {
                 + "Dining, Shopping, Health, Income, Other. If no transactions are found, return "
                 + "{\"transactions\": []}.\n\n"
                 + "Statement text:\n" + redactedText;
+    }
+
+    /**
+     * A receipt photo is one purchase, not a list to scan through - asks for the receipt's
+     * total (not itemized line items, which would over-fragment compared to how a statement
+     * represents the same purchase as one line) plus paymentMethod, which a statement extraction
+     * never needs (always CARD, set by the caller) but a receipt may show printed.
+     */
+    static String buildReceiptPrompt() {
+        return "You are a financial transaction extraction assistant. This image is a photo of "
+                + "a single purchase receipt. Extract ONE transaction representing the receipt's "
+                + "total (not each line item). Respond with ONLY a JSON object of this exact "
+                + "shape, and nothing else - no markdown, no commentary:\n"
+                + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
+                + "\"amount\": number, \"category\": \"string\", \"description\": \"string\", "
+                + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\"}]}\n"
+                + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
+                + "Dining, Shopping, Health, Income, Other. Use today's date if no date is "
+                + "visible on the receipt. If paymentMethod isn't shown or determinable, use "
+                + "\"UNKNOWN\". If this image is not a receipt, return {\"transactions\": []}.";
     }
 
     /** Pulls choices[0].message.content out of an OpenAI-compatible chat completion response. */
@@ -50,15 +70,34 @@ final class AiExtractionSupport {
         }
     }
 
-    /** Pulls result.response out of a Cloudflare Workers AI response. */
+    /**
+     * Pulls the model's output out of a Cloudflare Workers AI response. Verified empirically
+     * against the real API (2026-08-18, both the chat-completion text path and the vision
+     * path) - Cloudflare's own docs examples for this were confirmed broken via a flagged
+     * GitHub issue, so this isn't a guess. Real shape: "result.response" nested, and - the
+     * part the docs don't mention at all - already a parsed JSON *object* matching our
+     * requested schema, not a string to re-parse. Still falls back to "result" as a plain
+     * string / "result.response" as a string, in case a different model/endpoint on
+     * Cloudflare's side ever returns one of those instead.
+     */
     static String extractCloudflareResult(String responseBody) {
         try {
             JsonNode root = MAPPER.readTree(responseBody);
-            JsonNode response = root.at("/result/response");
-            if (response.isMissingNode()) {
-                throw new AiProviderException("Cloudflare response had no result.response field");
+            JsonNode result = root.get("result");
+            if (result == null || result.isMissingNode()) {
+                throw new AiProviderException("Cloudflare response had no 'result' field");
             }
-            return response.asText();
+            if (result.isTextual()) {
+                return result.asText();
+            }
+            JsonNode nestedResponse = result.get("response");
+            if (nestedResponse != null && nestedResponse.isTextual()) {
+                return nestedResponse.asText();
+            }
+            if (nestedResponse != null && nestedResponse.isObject()) {
+                return nestedResponse.toString();
+            }
+            throw new AiProviderException("Cloudflare 'result' was neither a string nor had a 'response' field");
         } catch (AiProviderException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -114,7 +153,8 @@ final class AiExtractionSupport {
                     : amountNode.decimalValue();
             String category = node.has("category") ? node.get("category").asText() : null;
             String description = node.has("description") ? node.get("description").asText() : null;
-            return new ExtractedTransaction(date, merchant, amount, category, description);
+            String paymentMethod = node.has("paymentMethod") ? node.get("paymentMethod").asText() : null;
+            return new ExtractedTransaction(date, merchant, amount, category, description, paymentMethod);
         } catch (DateTimeParseException | NumberFormatException | ArithmeticException | NullPointerException ex) {
             // Skip a malformed entry rather than guess at bad financial data - the rest of
             // the batch is still usable.
