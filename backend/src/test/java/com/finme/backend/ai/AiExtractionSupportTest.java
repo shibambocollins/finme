@@ -59,7 +59,7 @@ class AiExtractionSupportTest {
     }
 
     @Test
-    void extractsCloudflareResult() {
+    void extractsCloudflareResultWhenNested() {
         String response = """
                 {"result": {"response": "{\\"transactions\\": []}"}, "success": true}
                 """;
@@ -67,6 +67,56 @@ class AiExtractionSupportTest {
         String content = AiExtractionSupport.extractCloudflareResult(response);
 
         assertThat(content).isEqualTo("{\"transactions\": []}");
+    }
+
+    @Test
+    void extractsCloudflareResultWhenResponseIsAlreadyAJsonObject() {
+        // The real shape, confirmed against the live API on 2026-08-18 (both the chat-format
+        // text call and the vision call): "result.response" isn't a string to re-parse at all,
+        // it's already a parsed JSON object matching our schema. Regression coverage for a
+        // real bug this exact case caused - extractCloudflareResult originally only checked
+        // isTextual() here and threw on every real Cloudflare response.
+        String response = """
+                {"result": {"response": {"transactions": []}}, "success": true}
+                """;
+
+        String content = AiExtractionSupport.extractCloudflareResult(response);
+
+        assertThat(content).isEqualTo("{\"transactions\":[]}");
+    }
+
+    @Test
+    void extractsCloudflareResultWhenAPlainString() {
+        // Cloudflare's own published examples disagree on this shape (confirmed via a flagged
+        // docs GitHub issue) - defensive parsing must handle both.
+        String response = """
+                {"result": "{\\"transactions\\": []}", "success": true}
+                """;
+
+        String content = AiExtractionSupport.extractCloudflareResult(response);
+
+        assertThat(content).isEqualTo("{\"transactions\": []}");
+    }
+
+    @Test
+    void parsesOptionalPaymentMethodFromAReceiptTransaction() {
+        String json = """
+                {"transactions": [
+                  {"date": "2026-01-12", "merchant": "Corner Cafe", "amount": 65.00, "category": "Dining", "description": "desc", "paymentMethod": "CASH"}
+                ]}
+                """;
+
+        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
+
+        assertThat(result.get(0).paymentMethod()).isEqualTo("CASH");
+    }
+
+    @Test
+    void paymentMethodIsNullWhenAbsent() {
+        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(
+                "{\"transactions\": [{\"date\": \"2026-01-12\", \"merchant\": \"m\", \"amount\": 1, \"category\": \"c\", \"description\": \"d\"}]}");
+
+        assertThat(result.get(0).paymentMethod()).isNull();
     }
 
     @Test
