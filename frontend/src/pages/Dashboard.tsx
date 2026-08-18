@@ -31,6 +31,12 @@ interface BankStatementResponse {
   status: string;
 }
 
+interface ReceiptResponse {
+  id: number;
+  uploadDate: string;
+  status: string;
+}
+
 interface DashboardSummary {
   totalSpend: number;
   categoryBreakdown: { category: string; amount: number }[];
@@ -45,6 +51,7 @@ export function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
@@ -86,6 +93,25 @@ export function Dashboard() {
     }
   };
 
+  const handleReceiptFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setError(null);
+    setUploadingReceipt(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      await apiPostForm<ReceiptResponse>("/api/receipts", form, token);
+      await loadDashboard();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Receipt upload failed");
+    } finally {
+      setUploadingReceipt(false);
+      event.target.value = "";
+    }
+  };
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -102,6 +128,16 @@ export function Dashboard() {
         <label className="upload-button">
           {uploading ? "Uploading..." : "Upload bank statement (PDF)"}
           <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
+        </label>
+        <label className="upload-button">
+          {uploadingReceipt ? "Uploading..." : "Upload receipt (photo)"}
+          <input
+            type="file"
+            accept="image/jpeg,image/png"
+            onChange={handleReceiptFileChange}
+            disabled={uploadingReceipt}
+            hidden
+          />
         </label>
         {error && <p className="form-error">{error}</p>}
       </section>
