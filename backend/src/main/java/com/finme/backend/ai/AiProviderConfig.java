@@ -48,6 +48,32 @@ public class AiProviderConfig {
         return new FallbackAiProviderChain(providers);
     }
 
+    @Bean
+    @Primary
+    @ConditionalOnProperty(name = "ai.provider", havingValue = "chain")
+    public VisionAiProvider chainVisionAiProvider(
+            RestClient.Builder restClientBuilder,
+            @Value("${groq.api-key}") String groqApiKey,
+            @Value("${groq.vision-model}") String groqVisionModel,
+            @Value("${openrouter.api-key}") String openRouterApiKey,
+            @Value("${openrouter.vision-model}") String openRouterVisionModel,
+            @Value("${cloudflare.account-id}") String cloudflareAccountId,
+            @Value("${cloudflare.api-token}") String cloudflareApiToken,
+            @Value("${cloudflare.vision-model}") String cloudflareVisionModel) {
+
+        RestClient restClient = restClientBuilder
+                .requestFactory(timeoutRequestFactory())
+                .build();
+
+        List<VisionAiProvider> providers = List.of(
+                new GroqVisionProvider(restClient, groqApiKey, groqVisionModel),
+                new OpenRouterVisionProvider(restClient, openRouterApiKey, openRouterVisionModel),
+                new CloudflareVisionProvider(restClient, cloudflareAccountId, cloudflareApiToken, cloudflareVisionModel)
+        );
+
+        return new FallbackVisionAiProviderChain(providers);
+    }
+
     private SimpleClientHttpRequestFactory timeoutRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(15));
