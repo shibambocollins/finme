@@ -55,6 +55,19 @@
   font-size: 14px;
 }
 
+.oauth-button {
+  font: inherit;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
 .dashboard {
   flex: 1;
   padding: 24px 32px;
@@ -109,6 +122,44 @@
   background: var(--accent-bg);
   color: var(--text-h);
   cursor: pointer;
+}
+
+.summary-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.chart-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.chart-card h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
 }
 
 .transaction-table {

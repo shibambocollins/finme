@@ -9,8 +9,8 @@ interface AuthResponse {
 interface AuthContextValue {
   token: string | null;
   email: string | null;
-  register: (email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  completeOAuthLogin: (token: string, email: string) => void;
   logout: () => void;
 }
 
@@ -39,14 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
   };
 
-  const register = async (registerEmail: string, password: string) => {
-    const auth = await apiPostJson<AuthResponse>("/api/auth/register", { email: registerEmail, password });
-    applyAuth(auth);
-  };
-
   const login = async (loginEmail: string, password: string) => {
     const auth = await apiPostJson<AuthResponse>("/api/auth/login", { email: loginEmail, password });
     applyAuth(auth);
+  };
+
+  const completeOAuthLogin = (oauthToken: string, oauthEmail: string) => {
+    applyAuth({ token: oauthToken, email: oauthEmail });
   };
 
   const logout = () => {
@@ -56,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ token, email, register, login, logout }),
+    () => ({ token, email, login, completeOAuthLogin, logout }),
     [token, email],
   );
 

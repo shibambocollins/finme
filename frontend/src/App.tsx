@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Register } from "./pages/Register";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
+import { AuthCallback } from "./pages/AuthCallback";
 import "./App.css";
 
 function RootRedirect() {
@@ -18,6 +19,7 @@ function App() {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/auth-callback" element={<AuthCallback />} />
         <Route
           path="/dashboard"
           element={
