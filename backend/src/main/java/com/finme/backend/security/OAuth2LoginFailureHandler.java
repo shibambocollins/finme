@@ -18,7 +18,7 @@ public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
 
     private final String frontendLoginUri;
 
-    public OAuth2LoginFailureHandler(@Value("${app.oauth2.frontend-login-uri}") String frontendLoginUri) {
+    public OAuth2LoginFailureHandler(@Value("${app.auth.frontend-login-uri}") String frontendLoginUri) {
         this.frontendLoginUri = frontendLoginUri;
     }
 

@@ -30,7 +30,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
     public OAuth2LoginSuccessHandler(
             AuthService authService,
             JwtService jwtService,
-            @Value("${app.oauth2.frontend-redirect-uri}") String frontendRedirectUri) {
+            @Value("${app.auth.frontend-redirect-uri}") String frontendRedirectUri) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.frontendRedirectUri = frontendRedirectUri;
