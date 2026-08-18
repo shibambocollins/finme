@@ -4,6 +4,7 @@ import com.finme.backend.ai.AiProvider;
 import com.finme.backend.ai.ExtractedTransaction;
 import com.finme.backend.entity.BankStatement;
 import com.finme.backend.entity.StatementStatus;
+import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,7 +73,7 @@ class StatementIngestionIntegrationTest {
         BankStatement result = statementIngestionService.ingest(1L, file);
 
         assertThat(result.getStatus()).isEqualTo(StatementStatus.COMPLETE);
-        assertThat(transactionRepository.findByUserIdOrderByDateDesc(1L)).isNotEmpty();
+        assertThat(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE)).isNotEmpty();
 
         String textSeenByAi = capturingAiProvider.lastInput();
         assertThat(textSeenByAi).isNotBlank();
