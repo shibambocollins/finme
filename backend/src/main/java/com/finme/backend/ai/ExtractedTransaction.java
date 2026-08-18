@@ -14,6 +14,14 @@ public record ExtractedTransaction(
         String merchant,
         BigDecimal amount,
         String category,
-        String description
+        String description,
+        String paymentMethod
 ) {
+    /**
+     * Statement extraction never asks for paymentMethod (always CARD, set by the caller) -
+     * this keeps that call site unchanged. Only the receipt/vision path uses the 6-arg form.
+     */
+    public ExtractedTransaction(LocalDate date, String merchant, BigDecimal amount, String category, String description) {
+        this(date, merchant, amount, category, description, null);
+    }
 }
