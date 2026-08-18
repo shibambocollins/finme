@@ -2,6 +2,7 @@ package com.finme.backend.controller;
 
 import com.finme.backend.security.AuthenticatedUser;
 import com.finme.backend.dto.TransactionResponse;
+import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.repository.TransactionRepository;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +24,8 @@ public class TransactionController {
 
     @GetMapping
     public List<TransactionResponse> list() {
-        return transactionRepository.findByUserIdOrderByDateDesc(authenticatedUser.currentUserId())
+        return transactionRepository
+                .findByUserIdAndStatusOrderByDateDesc(authenticatedUser.currentUserId(), TransactionStatus.ACTIVE)
                 .stream()
                 .map(TransactionResponse::from)
                 .toList();
