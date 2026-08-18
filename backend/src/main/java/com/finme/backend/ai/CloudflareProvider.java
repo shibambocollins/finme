@@ -7,10 +7,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Verified against developers.cloudflare.com/workers-ai as of 2026-08. Different shape from
- * the OpenAI-compatible providers - a plain "prompt" string, not a messages array, and no
- * confirmed JSON-mode - so this doesn't extend AbstractOpenAiCompatibleProvider. Model
- * defaults to @cf/meta/llama-3.1-8b-instruct, a Cloudflare-hosted model (not a proxied
+ * Verified against the real API, 2026-08-18: a plain {"prompt": "..."} request routes this
+ * model through a raw-completion endpoint that does NOT reliably follow instructions - in
+ * testing it ignored the "respond with only JSON" instruction entirely and free-associated
+ * unrelated statement-like lines instead of extracting the given text. Switching to a
+ * {"messages": [...]} chat-format request (still not the OpenAI-compatible shape other
+ * providers use - no "model" field, no /v1/ path, different response envelope - so this still
+ * doesn't extend AbstractOpenAiCompatibleProvider) made it follow the instruction reliably.
+ * Model defaults to @cf/meta/llama-3.1-8b-instruct, a Cloudflare-hosted model (not a proxied
  * third-party one), per docs/07-tech-stack.md's guidance to stay within the free Neuron
  * allocation.
  */
@@ -31,7 +35,12 @@ public class CloudflareProvider implements AiProvider {
     @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
         String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model;
-        Map<String, Object> requestBody = Map.of("prompt", AiExtractionSupport.buildPrompt(redactedText));
+        Map<String, Object> requestBody = Map.of(
+                "messages", List.of(Map.of(
+                        "role", "user",
+                        "content", AiExtractionSupport.buildStatementPrompt(redactedText)
+                ))
+        );
 
         String responseBody;
         try {
