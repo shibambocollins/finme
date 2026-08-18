@@ -2,6 +2,7 @@ package com.finme.backend.service;
 
 import com.finme.backend.ai.AiProvider;
 import com.finme.backend.ai.ExtractedTransaction;
+import com.finme.backend.ai.VisionAiProvider;
 import com.finme.backend.entity.BankStatement;
 import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.entity.TransactionStatus;
@@ -47,6 +48,16 @@ class StatementIngestionIntegrationTest {
         @Bean
         CapturingAiProvider capturingAiProvider() {
             return new CapturingAiProvider();
+        }
+
+        // ReceiptController -> ReceiptIngestionService needs a VisionAiProvider bean to exist
+        // for the full app context to load here; this test doesn't exercise the receipt flow
+        // at all, so a never-called stub is enough.
+        @Bean
+        VisionAiProvider stubVisionAiProvider() {
+            return (imageBytes, mimeType) -> {
+                throw new UnsupportedOperationException("not used by this test");
+            };
         }
     }
 
