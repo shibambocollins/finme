@@ -20,8 +20,8 @@ import java.util.List;
 
 /**
  * Statement Upload Flow (docs/03-system-design.md Sec. 4): extract locally -> redact -> AI
- * structuring/categorization -> persist. Duplicate detection against receipt transactions is
- * a later iteration, so every transaction written here is simply ACTIVE/STATEMENT-sourced.
+ * structuring/categorization -> persist -> check each new transaction against existing
+ * receipt-sourced transactions for a duplicate.
  */
 @Service
 public class StatementIngestionService {
@@ -31,18 +31,21 @@ public class StatementIngestionService {
     private final PdfExtractionService pdfExtractionService;
     private final RedactionService redactionService;
     private final AiProvider aiProvider;
+    private final DuplicateDetectionService duplicateDetectionService;
 
     public StatementIngestionService(
             BankStatementRepository bankStatementRepository,
             TransactionRepository transactionRepository,
             PdfExtractionService pdfExtractionService,
             RedactionService redactionService,
-            AiProvider aiProvider) {
+            AiProvider aiProvider,
+            DuplicateDetectionService duplicateDetectionService) {
         this.bankStatementRepository = bankStatementRepository;
         this.transactionRepository = transactionRepository;
         this.pdfExtractionService = pdfExtractionService;
         this.redactionService = redactionService;
         this.aiProvider = aiProvider;
+        this.duplicateDetectionService = duplicateDetectionService;
     }
 
     public BankStatement ingest(Long userId, MultipartFile file) {
@@ -56,7 +59,8 @@ public class StatementIngestionService {
             List<ExtractedTransaction> extracted = aiProvider.structureTransactions(redactedText);
 
             for (ExtractedTransaction et : extracted) {
-                transactionRepository.save(toTransaction(userId, statement.getId(), et));
+                Transaction transaction = transactionRepository.save(toTransaction(userId, statement.getId(), et));
+                duplicateDetectionService.checkForDuplicate(transaction);
             }
 
             statement.setStatus(StatementStatus.COMPLETE);
