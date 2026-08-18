@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
+
 export function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -50,6 +52,9 @@ export function Register() {
         <button type="submit" disabled={submitting}>
           {submitting ? "Creating account..." : "Register"}
         </button>
+        <a className="oauth-button" href={`${API_BASE_URL}/oauth2/authorization/google`}>
+          Continue with Google
+        </a>
         <p>
           Already have an account? <Link to="/login">Log in</Link>
         </p>
