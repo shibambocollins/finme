@@ -11,6 +11,7 @@ interface AuthContextValue {
   email: string | null;
   register: (email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
+  completeOAuthLogin: (token: string, email: string) => void;
   logout: () => void;
 }
 
@@ -49,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     applyAuth(auth);
   };
 
+  const completeOAuthLogin = (oauthToken: string, oauthEmail: string) => {
+    applyAuth({ token: oauthToken, email: oauthEmail });
+  };
+
   const logout = () => {
     setToken(null);
     setEmail(null);
@@ -56,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ token, email, register, login, logout }),
+    () => ({ token, email, register, login, completeOAuthLogin, logout }),
     [token, email],
   );
 
