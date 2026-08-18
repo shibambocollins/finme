@@ -5,6 +5,12 @@ import { ApiError } from "../api/client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
+const ERROR_MESSAGES: Record<string, string> = {
+  oauth2: "Google sign-in failed - please try again",
+  verification: "That verification link is invalid or has expired - request a new one from the register page",
+  auth: "Sign-in link was invalid or incomplete - please try again",
+};
+
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -12,7 +18,7 @@ export function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(
-    searchParams.get("error") === "oauth2" ? "Google sign-in failed - please try again" : null,
+    ERROR_MESSAGES[searchParams.get("error") ?? ""] ?? null,
   );
   const [submitting, setSubmitting] = useState(false);
 
