@@ -66,13 +66,20 @@ public class Transaction {
     private Long supersededBy;
 
     /**
-     * Only ever populated from a receipt photo's printed address (statement text has no
-     * address to extract) - null means "not geocoded", not "geocoding failed", since
-     * docs/03-system-design.md Sec.2 already scopes map coordinates as "where available".
+     * Only ever populated from a receipt photo's printed address - null means "not geocoded",
+     * not "geocoding failed", since docs/03-system-design.md Sec.2 already scopes map
+     * coordinates as "where available". See TransactionGeocoder.
      */
     private String address;
 
     private Double latitude;
 
     private Double longitude;
+
+    /**
+     * True when latitude/longitude came from TransactionGeocoder's merchant+locationHint
+     * fallback (a plausible branch, not necessarily the one actually visited) rather than an
+     * exact receipt address - the map must show these differently, never as ground truth.
+     */
+    private boolean locationApproximate;
 }

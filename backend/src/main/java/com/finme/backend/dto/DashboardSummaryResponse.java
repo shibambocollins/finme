@@ -15,8 +15,11 @@ public record DashboardSummaryResponse(
     public record MonthlyAmount(String month, BigDecimal amount) {
     }
 
-    /** Only transactions geocoded from a receipt's printed address ever appear here - see
-     * Transaction.address/latitude/longitude. */
-    public record SpendLocation(String merchant, BigDecimal amount, double latitude, double longitude) {
+    /**
+     * approximate=true means TransactionGeocoder resolved this from a merchant name +
+     * locationHint fallback (a plausible branch, not necessarily the one visited), not an
+     * exact receipt address - the frontend must render these visibly differently.
+     */
+    public record SpendLocation(String merchant, BigDecimal amount, double latitude, double longitude, boolean approximate) {
     }
 }
