@@ -29,7 +29,7 @@ public class MockAiProvider implements AiProvider {
         return List.of(
                 new ExtractedTransaction(
                         LocalDate.now().minusDays(3), "Woolworths", new BigDecimal("450.00"),
-                        "Groceries", "Mock-extracted transaction"),
+                        "Groceries", "Mock-extracted transaction", null, null, "Cape Town"),
                 new ExtractedTransaction(
                         LocalDate.now().minusDays(1), "Uber", new BigDecimal("85.50"),
                         "Transport", "Mock-extracted transaction")

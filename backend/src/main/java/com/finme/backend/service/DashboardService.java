@@ -60,7 +60,7 @@ public class DashboardService {
 
         List<SpendLocation> locations = transactions.stream()
                 .filter(t -> t.getLatitude() != null && t.getLongitude() != null)
-                .map(t -> new SpendLocation(t.getMerchant(), t.getAmount(), t.getLatitude(), t.getLongitude()))
+                .map(t -> new SpendLocation(t.getMerchant(), t.getAmount(), t.getLatitude(), t.getLongitude(), t.isLocationApproximate()))
                 .toList();
 
         return new DashboardSummaryResponse(totalSpend, categoryBreakdown, trend, locations);
