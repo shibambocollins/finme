@@ -47,11 +47,14 @@ final class AiExtractionSupport {
                 + "shape, and nothing else - no markdown, no commentary:\n"
                 + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
                 + "\"amount\": number, \"category\": \"string\", \"description\": \"string\", "
-                + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\"}]}\n"
+                + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\", \"address\": \"string or null\"}]}\n"
                 + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
                 + "Dining, Shopping, Health, Income, Other. Use today's date if no date is "
                 + "visible on the receipt. If paymentMethod isn't shown or determinable, use "
-                + "\"UNKNOWN\". If this image is not a receipt, return {\"transactions\": []}.";
+                + "\"UNKNOWN\". Set \"address\" to the store's street address exactly as printed "
+                + "on the receipt (street, suburb/city - not just a store name or branch number); "
+                + "use null if no address is printed on the receipt. If this image is not a "
+                + "receipt, return {\"transactions\": []}.";
     }
 
     /** Pulls choices[0].message.content out of an OpenAI-compatible chat completion response. */
@@ -154,7 +157,10 @@ final class AiExtractionSupport {
             String category = node.has("category") ? node.get("category").asText() : null;
             String description = node.has("description") ? node.get("description").asText() : null;
             String paymentMethod = node.has("paymentMethod") ? node.get("paymentMethod").asText() : null;
-            return new ExtractedTransaction(date, merchant, amount, category, description, paymentMethod);
+            String rawAddress = node.has("address") && !node.get("address").isNull()
+                    ? node.get("address").asText() : null;
+            String address = (rawAddress == null || rawAddress.isBlank()) ? null : rawAddress;
+            return new ExtractedTransaction(date, merchant, amount, category, description, paymentMethod, address);
         } catch (DateTimeParseException | NumberFormatException | ArithmeticException | NullPointerException ex) {
             // Skip a malformed entry rather than guess at bad financial data - the rest of
             // the batch is still usable.

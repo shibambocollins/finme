@@ -64,4 +64,15 @@ public class Transaction {
 
     @Column(name = "superseded_by")
     private Long supersededBy;
+
+    /**
+     * Only ever populated from a receipt photo's printed address (statement text has no
+     * address to extract) - null means "not geocoded", not "geocoding failed", since
+     * docs/03-system-design.md Sec.2 already scopes map coordinates as "where available".
+     */
+    private String address;
+
+    private Double latitude;
+
+    private Double longitude;
 }
