@@ -10,6 +10,7 @@ import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.ReceiptProcessingException;
+import com.finme.backend.geocoding.GeocodingProvider;
 import com.finme.backend.repository.ReceiptRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -31,14 +32,17 @@ public class ReceiptIngestionService {
     private final ReceiptRepository receiptRepository;
     private final TransactionRepository transactionRepository;
     private final VisionAiProvider visionAiProvider;
+    private final GeocodingProvider geocodingProvider;
 
     public ReceiptIngestionService(
             ReceiptRepository receiptRepository,
             TransactionRepository transactionRepository,
-            VisionAiProvider visionAiProvider) {
+            VisionAiProvider visionAiProvider,
+            GeocodingProvider geocodingProvider) {
         this.receiptRepository = receiptRepository;
         this.transactionRepository = transactionRepository;
         this.visionAiProvider = visionAiProvider;
+        this.geocodingProvider = geocodingProvider;
     }
 
     public Receipt ingest(Long userId, MultipartFile file) {
@@ -76,6 +80,13 @@ public class ReceiptIngestionService {
         transaction.setDescription(et.description());
         transaction.setPaymentMethod(parsePaymentMethod(et.paymentMethod()));
         transaction.setStatus(TransactionStatus.ACTIVE);
+        transaction.setAddress(et.address());
+        // A geocoding miss (no address, or the provider couldn't resolve one) just leaves the
+        // transaction's coordinates null - it never fails receipt ingestion.
+        geocodingProvider.geocode(et.address()).ifPresent(result -> {
+            transaction.setLatitude(result.latitude());
+            transaction.setLongitude(result.longitude());
+        });
         return transaction;
     }
 
