@@ -10,6 +10,7 @@ import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.StatementProcessingException;
+import com.finme.backend.geocoding.TransactionGeocoder;
 import com.finme.backend.repository.BankStatementRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class StatementIngestionService {
     private final RedactionService redactionService;
     private final AiProvider aiProvider;
     private final DuplicateDetectionService duplicateDetectionService;
+    private final TransactionGeocoder transactionGeocoder;
 
     public StatementIngestionService(
             BankStatementRepository bankStatementRepository,
@@ -39,13 +41,15 @@ public class StatementIngestionService {
             PdfExtractionService pdfExtractionService,
             RedactionService redactionService,
             AiProvider aiProvider,
-            DuplicateDetectionService duplicateDetectionService) {
+            DuplicateDetectionService duplicateDetectionService,
+            TransactionGeocoder transactionGeocoder) {
         this.bankStatementRepository = bankStatementRepository;
         this.transactionRepository = transactionRepository;
         this.pdfExtractionService = pdfExtractionService;
         this.redactionService = redactionService;
         this.aiProvider = aiProvider;
         this.duplicateDetectionService = duplicateDetectionService;
+        this.transactionGeocoder = transactionGeocoder;
     }
 
     public BankStatement ingest(Long userId, MultipartFile file) {
@@ -85,6 +89,7 @@ public class StatementIngestionService {
         transaction.setDescription(et.description());
         transaction.setPaymentMethod(PaymentMethod.CARD);
         transaction.setStatus(TransactionStatus.ACTIVE);
+        transactionGeocoder.enrich(transaction, et);
         return transaction;
     }
 }

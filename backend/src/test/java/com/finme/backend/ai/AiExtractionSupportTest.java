@@ -148,6 +148,34 @@ class AiExtractionSupportTest {
     }
 
     @Test
+    void parsesOptionalLocationHintFromAStatementTransaction() {
+        String json = """
+                {"transactions": [
+                  {"date": "2026-01-12", "merchant": "KFC", "amount": 75.00, "category": "Dining", "description": "desc", "locationHint": "Cape Town CBD"}
+                ]}
+                """;
+
+        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
+
+        assertThat(result.get(0).locationHint()).isEqualTo("Cape Town CBD");
+    }
+
+    @Test
+    void locationHintIsNullWhenAbsentOrExplicitlyNullOrBlank() {
+        String json = """
+                {"transactions": [
+                  {"date": "2026-01-12", "merchant": "a", "amount": 1, "category": "c", "description": "d"},
+                  {"date": "2026-01-12", "merchant": "b", "amount": 1, "category": "c", "description": "d", "locationHint": null},
+                  {"date": "2026-01-12", "merchant": "c", "amount": 1, "category": "c", "description": "d", "locationHint": "  "}
+                ]}
+                """;
+
+        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
+
+        assertThat(result).extracting(ExtractedTransaction::locationHint).containsExactly(null, null, null);
+    }
+
+    @Test
     void extractsJsonObjectFromSurroundingProse() {
         String messy = "Sure, here you go:\n```json\n{\"transactions\": []}\n```\nHope that helps!";
 
