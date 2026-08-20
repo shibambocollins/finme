@@ -15,13 +15,19 @@ public record ExtractedTransaction(
         BigDecimal amount,
         String category,
         String description,
-        String paymentMethod
+        String paymentMethod,
+        String address
 ) {
     /**
-     * Statement extraction never asks for paymentMethod (always CARD, set by the caller) -
-     * this keeps that call site unchanged. Only the receipt/vision path uses the 6-arg form.
+     * Statement extraction never asks for paymentMethod or address (statement text has no
+     * printed address to extract) - this keeps that call site unchanged.
      */
     public ExtractedTransaction(LocalDate date, String merchant, BigDecimal amount, String category, String description) {
-        this(date, merchant, amount, category, description, null);
+        this(date, merchant, amount, category, description, null, null);
+    }
+
+    /** Pre-address receipt/vision call sites and tests - address defaults to not-extracted. */
+    public ExtractedTransaction(LocalDate date, String merchant, BigDecimal amount, String category, String description, String paymentMethod) {
+        this(date, merchant, amount, category, description, paymentMethod, null);
     }
 }
