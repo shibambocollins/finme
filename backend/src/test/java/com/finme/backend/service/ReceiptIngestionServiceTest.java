@@ -12,6 +12,7 @@ import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.ReceiptProcessingException;
 import com.finme.backend.geocoding.GeocodeResult;
 import com.finme.backend.geocoding.GeocodingProvider;
+import com.finme.backend.geocoding.TransactionGeocoder;
 import com.finme.backend.repository.ReceiptRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,7 @@ class ReceiptIngestionServiceTest {
     private final VisionAiProvider visionAiProvider = mock(VisionAiProvider.class);
     private final GeocodingProvider geocodingProvider = mock(GeocodingProvider.class);
     private final ReceiptIngestionService receiptIngestionService = new ReceiptIngestionService(
-            receiptRepository, transactionRepository, visionAiProvider, geocodingProvider);
+            receiptRepository, transactionRepository, visionAiProvider, new TransactionGeocoder(geocodingProvider));
 
     private static MockMultipartFile jpegFile() {
         return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", new byte[]{1, 2, 3});
@@ -114,6 +115,27 @@ class ReceiptIngestionServiceTest {
         assertThat(saved.getAddress()).isEqualTo("1 Sandton Dr, Sandton");
         assertThat(saved.getLatitude()).isEqualTo(-26.1076);
         assertThat(saved.getLongitude()).isEqualTo(28.0567);
+        assertThat(saved.isLocationApproximate()).isFalse();
+    }
+
+    @Test
+    void geocodesApproximatelyFromMerchantAndLocationHintWhenNoAddressWasExtracted() throws Exception {
+        stubReceiptSaveAssignsId(12L);
+        when(visionAiProvider.extractFromImage(any(), any())).thenReturn(List.of(
+                new ExtractedTransaction(LocalDate.of(2026, 1, 10), "KFC",
+                        new BigDecimal("75.00"), "Dining", "receipt", "CARD", null, "Cape Town CBD")));
+        when(geocodingProvider.geocode("KFC, Cape Town CBD"))
+                .thenReturn(Optional.of(new GeocodeResult(-33.9249, 18.4241)));
+
+        receiptIngestionService.ingest(1L, jpegFile());
+
+        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository).save(captor.capture());
+        Transaction saved = captor.getValue();
+        assertThat(saved.getAddress()).isNull();
+        assertThat(saved.getLatitude()).isEqualTo(-33.9249);
+        assertThat(saved.getLongitude()).isEqualTo(18.4241);
+        assertThat(saved.isLocationApproximate()).isTrue();
     }
 
     @Test
