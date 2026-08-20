@@ -142,5 +142,22 @@ class DashboardServiceTest {
         assertThat(location.amount()).isEqualByComparingTo("120.00");
         assertThat(location.latitude()).isEqualTo(-26.1076);
         assertThat(location.longitude()).isEqualTo(28.0567);
+        assertThat(location.approximate()).isFalse();
+    }
+
+    @Test
+    void flagsApproximateLocationsSeparatelyFromExactOnes() {
+        Transaction approximate = transaction(LocalDate.of(2026, 1, 5), "KFC", "75.00", "Dining");
+        approximate.setLatitude(-33.9249);
+        approximate.setLongitude(18.4241);
+        approximate.setLocationApproximate(true);
+
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(approximate));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.locations()).hasSize(1);
+        assertThat(summary.locations().get(0).approximate()).isTrue();
     }
 }
