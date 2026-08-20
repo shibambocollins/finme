@@ -52,6 +52,12 @@ deliberately at implementation time, not guessed at here).
   FinMe — for blast-radius isolation, per-project usage visibility, and independent
   revocation. Costs nothing extra: quota is scoped per-account, not per-key, on Groq,
   OpenRouter, and Cloudflare.
+- **Geocoding provider:** OpenCage (2,500 req/day free, no card required). Chosen over Google
+  Geocoding to avoid tying a personal-use portfolio project to Google billing and ToS caching
+  restrictions — the free tier ceiling is well above solo-user receipt volume.
+- **Map visualization library:** Mapbox GL JS (50k map loads/month free). Chosen over Leaflet
+  for nicer default vector-tile styling in a portfolio piece where visual polish matters;
+  requires a client-side token restricted by domain (standard practice, not a secret leak).
 
 ## Explicitly excluded
 
@@ -69,9 +75,6 @@ deliberately at implementation time, not guessed at here).
 - **Email/notification delivery.** SendGrid (free tier, less setup) vs. plain SMTP via Java
   Mail (no new dependency). Decide when building the notification iteration.
 - **Charting library (React).** Recharts or Chart.js both fit; not decided.
-- **Map visualization library.** Leaflet (free, open-source) vs. Google Maps JS API (usage
-  costs at scale) vs. Mapbox. Leaflet is the likely low-friction default at personal-use
-  scale, but not decided in conversation.
 - **Exact Azure compute service** (App Service vs. Container Apps vs. VM) beyond the F1→B1
   App Service path noted above.
 
