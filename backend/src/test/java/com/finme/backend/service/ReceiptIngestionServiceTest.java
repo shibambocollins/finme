@@ -10,6 +10,8 @@ import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.ReceiptProcessingException;
+import com.finme.backend.geocoding.GeocodeResult;
+import com.finme.backend.geocoding.GeocodingProvider;
 import com.finme.backend.repository.ReceiptRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,8 +37,9 @@ class ReceiptIngestionServiceTest {
     private final ReceiptRepository receiptRepository = mock(ReceiptRepository.class);
     private final TransactionRepository transactionRepository = mock(TransactionRepository.class);
     private final VisionAiProvider visionAiProvider = mock(VisionAiProvider.class);
-    private final ReceiptIngestionService receiptIngestionService =
-            new ReceiptIngestionService(receiptRepository, transactionRepository, visionAiProvider);
+    private final GeocodingProvider geocodingProvider = mock(GeocodingProvider.class);
+    private final ReceiptIngestionService receiptIngestionService = new ReceiptIngestionService(
+            receiptRepository, transactionRepository, visionAiProvider, geocodingProvider);
 
     private static MockMultipartFile jpegFile() {
         return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", new byte[]{1, 2, 3});
@@ -90,6 +94,43 @@ class ReceiptIngestionServiceTest {
         assertThat(captor.getAllValues())
                 .extracting(Transaction::getPaymentMethod)
                 .containsExactly(PaymentMethod.UNKNOWN, PaymentMethod.UNKNOWN);
+    }
+
+    @Test
+    void geocodesTheTransactionWhenTheVisionProviderExtractsAnAddress() throws Exception {
+        stubReceiptSaveAssignsId(10L);
+        when(visionAiProvider.extractFromImage(any(), any())).thenReturn(List.of(
+                new ExtractedTransaction(LocalDate.of(2026, 1, 10), "Woolworths",
+                        new BigDecimal("120.00"), "Groceries", "milk and bread", "CARD",
+                        "1 Sandton Dr, Sandton")));
+        when(geocodingProvider.geocode("1 Sandton Dr, Sandton"))
+                .thenReturn(Optional.of(new GeocodeResult(-26.1076, 28.0567)));
+
+        receiptIngestionService.ingest(1L, jpegFile());
+
+        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository).save(captor.capture());
+        Transaction saved = captor.getValue();
+        assertThat(saved.getAddress()).isEqualTo("1 Sandton Dr, Sandton");
+        assertThat(saved.getLatitude()).isEqualTo(-26.1076);
+        assertThat(saved.getLongitude()).isEqualTo(28.0567);
+    }
+
+    @Test
+    void leavesCoordinatesNullWhenNoAddressWasExtractedOrGeocodingMisses() throws Exception {
+        stubReceiptSaveAssignsId(11L);
+        when(visionAiProvider.extractFromImage(any(), any())).thenReturn(List.of(
+                new ExtractedTransaction(LocalDate.of(2026, 1, 10), "Corner Cafe",
+                        new BigDecimal("65.00"), "Dining", "coffee", "CASH")));
+
+        receiptIngestionService.ingest(1L, jpegFile());
+
+        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository).save(captor.capture());
+        Transaction saved = captor.getValue();
+        assertThat(saved.getAddress()).isNull();
+        assertThat(saved.getLatitude()).isNull();
+        assertThat(saved.getLongitude()).isNull();
     }
 
     @Test
