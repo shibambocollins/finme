@@ -3,13 +3,15 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined;
-const ACCENT = "#aa3bff";
+const EXACT_COLOR = "#aa3bff";
+const APPROXIMATE_COLOR = "#e0a33b";
 
 export interface SpendLocation {
   merchant: string;
   amount: number;
   latitude: number;
   longitude: number;
+  approximate: boolean;
 }
 
 interface SpendMapProps {
@@ -17,9 +19,9 @@ interface SpendMapProps {
 }
 
 /**
- * Only ever plots transactions the backend actually geocoded from a receipt's printed
- * address (see DashboardSummaryResponse.locations) - statement-sourced spend has no address
- * to geocode, so most transactions never appear here. That's expected sparsity, not a bug.
+ * approximate=true pins came from TransactionGeocoder's merchant-name+locationHint fallback
+ * (a plausible branch, not necessarily the one visited) rather than an exact receipt address -
+ * shown in a visibly different color so the map never overstates what it actually knows.
  */
 export function SpendMap({ locations }: SpendMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -42,10 +44,13 @@ export function SpendMap({ locations }: SpendMapProps) {
 
     const bounds = new mapboxgl.LngLatBounds();
     markersRef.current = locations.map((location) => {
+      const approximateNote = location.approximate
+        ? '<br/><span style="opacity:0.7">Approximate location</span>'
+        : "";
       const popup = new mapboxgl.Popup({ offset: 12 }).setHTML(
-        `<strong>${escapeHtml(location.merchant)}</strong><br/>R${location.amount.toFixed(2)}`
+        `<strong>${escapeHtml(location.merchant)}</strong><br/>R${location.amount.toFixed(2)}${approximateNote}`
       );
-      const marker = new mapboxgl.Marker({ color: ACCENT })
+      const marker = new mapboxgl.Marker({ color: location.approximate ? APPROXIMATE_COLOR : EXACT_COLOR })
         .setLngLat([location.longitude, location.latitude])
         .setPopup(popup)
         .addTo(map);
@@ -74,10 +79,22 @@ export function SpendMap({ locations }: SpendMapProps) {
   }
 
   if (locations.length === 0) {
-    return <p>No geocoded spend locations yet - upload a receipt with a printed address to see it here.</p>;
+    return <p>No geocoded spend locations yet - upload a receipt or statement to see it here.</p>;
   }
 
-  return <div ref={containerRef} className="spend-map" />;
+  const hasApproximate = locations.some((l) => l.approximate);
+
+  return (
+    <>
+      <div ref={containerRef} className="spend-map" />
+      {hasApproximate && (
+        <p className="spend-map-legend">
+          <span className="legend-dot" style={{ background: EXACT_COLOR }} /> Exact (receipt address)
+          <span className="legend-dot" style={{ background: APPROXIMATE_COLOR }} /> Approximate (merchant + area)
+        </p>
+      )}
+    </>
+  );
 }
 
 function escapeHtml(value: string): string {
