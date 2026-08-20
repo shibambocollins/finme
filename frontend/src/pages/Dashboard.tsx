@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet, apiPostForm, ApiError } from "../api/client";
+import { SpendMap, type SpendLocation } from "../components/SpendMap";
 
 interface Transaction {
   id: number;
@@ -41,6 +42,7 @@ interface DashboardSummary {
   totalSpend: number;
   categoryBreakdown: { category: string; amount: number }[];
   trend: { month: string; amount: number }[];
+  locations: SpendLocation[];
 }
 
 const ACCENT = "#aa3bff";
@@ -178,6 +180,11 @@ export function Dashboard() {
               </ResponsiveContainer>
             </div>
           )}
+
+          <div className="chart-card chart-card--wide">
+            <h2>Spend map</h2>
+            <SpendMap locations={summary.locations} />
+          </div>
         </section>
       )}
 
