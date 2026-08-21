@@ -58,6 +58,15 @@ public class Transaction {
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod = PaymentMethod.UNKNOWN;
 
+    /**
+     * Defaults to DEBIT so rows written before this column existed, and any extraction where
+     * the AI omits the field, are treated as spending - the safe reading for a finance app,
+     * since under-reporting spend is the more misleading error.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TransactionDirection direction = TransactionDirection.DEBIT;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionStatus status = TransactionStatus.ACTIVE;

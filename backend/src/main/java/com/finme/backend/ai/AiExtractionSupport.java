@@ -27,8 +27,16 @@ final class AiExtractionSupport {
                 + "JSON object of this exact shape, and nothing else - no markdown, no "
                 + "commentary:\n"
                 + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
-                + "\"amount\": number, \"category\": \"string\", \"description\": \"string\", "
+                + "\"amount\": number, \"direction\": \"DEBIT or CREDIT\", "
+                + "\"category\": \"string\", \"description\": \"string\", "
                 + "\"locationHint\": \"string or null\"}]}\n"
+                + "Always report \"amount\" as a POSITIVE number, and use \"direction\" to say "
+                + "which way the money moved: \"DEBIT\" for money leaving the account "
+                + "(purchases, fees, debit orders - the Debit column) and \"CREDIT\" for money "
+                + "arriving (salaries, deposits, refunds, reversals - the Credit column). The "
+                + "column the figure sits under decides this, not the merchant name. A refund "
+                + "keeps the category of whatever was originally bought - a returned grocery "
+                + "item is still \"Groceries\" - and is marked CREDIT.\n"
                 + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
                 + "Dining, Shopping, Health, Income, Other. Card statement merchant lines often "
                 + "carry a branch, suburb, or city name alongside the merchant (e.g. "
@@ -52,9 +60,13 @@ final class AiExtractionSupport {
                 + "total (not each line item). Respond with ONLY a JSON object of this exact "
                 + "shape, and nothing else - no markdown, no commentary:\n"
                 + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
-                + "\"amount\": number, \"category\": \"string\", \"description\": \"string\", "
+                + "\"amount\": number, \"direction\": \"DEBIT or CREDIT\", "
+                + "\"category\": \"string\", \"description\": \"string\", "
                 + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\", \"address\": \"string or null\", "
                 + "\"locationHint\": \"string or null\"}]}\n"
+                + "Report \"amount\" as a POSITIVE number. \"direction\" is \"DEBIT\" for an "
+                + "ordinary purchase receipt; use \"CREDIT\" only when the slip is explicitly a "
+                + "refund, return, or credit note.\n"
                 + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
                 + "Dining, Shopping, Health, Income, Other. Use today's date if no date is "
                 + "visible on the receipt. If paymentMethod isn't shown or determinable, use "
@@ -66,10 +78,26 @@ final class AiExtractionSupport {
                 + "identifiable. If this image is not a receipt, return {\"transactions\": []}.";
     }
 
-    /** Pulls choices[0].message.content out of an OpenAI-compatible chat completion response. */
+    /**
+     * Pulls choices[0].message.content out of an OpenAI-compatible chat completion response,
+     * rejecting a response the model didn't finish.
+     * <p>
+     * The finish_reason check is the important part. A truncated extraction does NOT reliably
+     * produce broken JSON that parsing would catch - verified live against Groq on 2026-08-21,
+     * where hitting the token cap yielded a perfectly valid {"transactions":[...]} holding 1 of
+     * 16 real transactions. Silently trusting that is worse than failing: the dashboard reports
+     * a confident, wrong total with nothing logged. Treating it as a provider failure lets
+     * FallbackAiProviderChain try the next provider, whose limits differ.
+     */
     static String extractOpenAiMessageContent(String responseBody, String providerName) {
         try {
             JsonNode root = MAPPER.readTree(responseBody);
+            JsonNode finishReason = root.at("/choices/0/finish_reason");
+            if ("length".equals(finishReason.asText())) {
+                throw new AiProviderException(providerName
+                        + " hit its output token limit mid-extraction (finish_reason=length) - the"
+                        + " transaction list would be silently incomplete");
+            }
             JsonNode content = root.at("/choices/0/message/content");
             if (content.isMissingNode()) {
                 throw new AiProviderException(providerName + " response had no message content");
@@ -168,8 +196,10 @@ final class AiExtractionSupport {
             String paymentMethod = node.has("paymentMethod") ? node.get("paymentMethod").asText() : null;
             String address = optionalText(node, "address");
             String locationHint = optionalText(node, "locationHint");
+            String direction = optionalText(node, "direction");
             return new ExtractedTransaction(
-                    date, merchant, amount, category, description, paymentMethod, address, locationHint);
+                    date, merchant, amount, category, description, paymentMethod, address, locationHint,
+                    direction);
         } catch (DateTimeParseException | NumberFormatException | ArithmeticException | NullPointerException ex) {
             // Skip a malformed entry rather than guess at bad financial data - the rest of
             // the batch is still usable.

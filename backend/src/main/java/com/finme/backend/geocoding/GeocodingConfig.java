@@ -22,7 +22,8 @@ public class GeocodingConfig {
     @ConditionalOnProperty(name = "geocoding.provider", havingValue = "opencage")
     public GeocodingProvider openCageGeocodingProvider(
             RestClient.Builder restClientBuilder,
-            @Value("${opencage.api-key}") String apiKey) {
-        return new OpenCageGeocodingProvider(restClientBuilder.build(), apiKey);
+            @Value("${opencage.api-key}") String apiKey,
+            @Value("${opencage.country-code}") String countryCode) {
+        return new OpenCageGeocodingProvider(restClientBuilder.build(), apiKey, countryCode);
     }
 }
