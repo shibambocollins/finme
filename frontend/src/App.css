@@ -214,3 +214,9 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Money in - a salary, deposit, or refund. Distinguished from spending in the transaction
+   table because the amount column alone cannot convey it (both are positive numbers). */
+.amount-credit {
+  color: #3ba55d;
+}
