@@ -15,13 +15,34 @@ public record ExtractedTransaction(
         BigDecimal amount,
         String category,
         String description,
-        String paymentMethod
+        String paymentMethod,
+        String address,
+        /**
+         * A city/suburb/place name the source text associates with this merchant (e.g. a card
+         * statement line reading "KFC V&A WATERFRONT", or a receipt header naming a branch
+         * area) - distinct from address: never a full street address, just enough text for
+         * TransactionGeocoder to disambiguate a chain's branches without geocoding a bare
+         * merchant name nationally. Statements are "specific about location but not address"
+         * (Collins, 2026-08-21) - this is what lets statement-sourced transactions appear on
+         * the map at all, approximately, when they'll never have a printed address.
+         */
+        String locationHint
 ) {
     /**
-     * Statement extraction never asks for paymentMethod (always CARD, set by the caller) -
-     * this keeps that call site unchanged. Only the receipt/vision path uses the 6-arg form.
+     * Statement extraction never asks for paymentMethod or address (statement text has no
+     * printed address to extract) - this keeps that call site unchanged.
      */
     public ExtractedTransaction(LocalDate date, String merchant, BigDecimal amount, String category, String description) {
-        this(date, merchant, amount, category, description, null);
+        this(date, merchant, amount, category, description, null, null, null);
+    }
+
+    /** Pre-address receipt/vision call sites and tests - address defaults to not-extracted. */
+    public ExtractedTransaction(LocalDate date, String merchant, BigDecimal amount, String category, String description, String paymentMethod) {
+        this(date, merchant, amount, category, description, paymentMethod, null, null);
+    }
+
+    /** Pre-locationHint receipt call sites and tests - locationHint defaults to not-extracted. */
+    public ExtractedTransaction(LocalDate date, String merchant, BigDecimal amount, String category, String description, String paymentMethod, String address) {
+        this(date, merchant, amount, category, description, paymentMethod, address, null);
     }
 }

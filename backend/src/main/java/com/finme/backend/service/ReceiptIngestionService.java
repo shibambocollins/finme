@@ -10,6 +10,7 @@ import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.ReceiptProcessingException;
+import com.finme.backend.geocoding.TransactionGeocoder;
 import com.finme.backend.repository.ReceiptRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -31,14 +32,17 @@ public class ReceiptIngestionService {
     private final ReceiptRepository receiptRepository;
     private final TransactionRepository transactionRepository;
     private final VisionAiProvider visionAiProvider;
+    private final TransactionGeocoder transactionGeocoder;
 
     public ReceiptIngestionService(
             ReceiptRepository receiptRepository,
             TransactionRepository transactionRepository,
-            VisionAiProvider visionAiProvider) {
+            VisionAiProvider visionAiProvider,
+            TransactionGeocoder transactionGeocoder) {
         this.receiptRepository = receiptRepository;
         this.transactionRepository = transactionRepository;
         this.visionAiProvider = visionAiProvider;
+        this.transactionGeocoder = transactionGeocoder;
     }
 
     public Receipt ingest(Long userId, MultipartFile file) {
@@ -76,6 +80,7 @@ public class ReceiptIngestionService {
         transaction.setDescription(et.description());
         transaction.setPaymentMethod(parsePaymentMethod(et.paymentMethod()));
         transaction.setStatus(TransactionStatus.ACTIVE);
+        transactionGeocoder.enrich(transaction, et);
         return transaction;
     }
 

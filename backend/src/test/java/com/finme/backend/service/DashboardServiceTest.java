@@ -123,4 +123,41 @@ class DashboardServiceTest {
         assertThat(summary.trend()).extracting("month").containsExactly("2026-01", "2026-02", "2026-03");
         assertThat(summary.trend().get(0).amount()).isEqualByComparingTo("15.00");
     }
+
+    @Test
+    void includesOnlyTransactionsThatWereActuallyGeocoded() {
+        Transaction geocoded = transaction(LocalDate.of(2026, 1, 5), "Woolworths", "120.00", "Groceries");
+        geocoded.setLatitude(-26.1076);
+        geocoded.setLongitude(28.0567);
+        Transaction ungeocoded = transaction(LocalDate.of(2026, 1, 6), "Corner Cafe", "65.00", "Dining");
+
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(geocoded, ungeocoded));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.locations()).hasSize(1);
+        var location = summary.locations().get(0);
+        assertThat(location.merchant()).isEqualTo("Woolworths");
+        assertThat(location.amount()).isEqualByComparingTo("120.00");
+        assertThat(location.latitude()).isEqualTo(-26.1076);
+        assertThat(location.longitude()).isEqualTo(28.0567);
+        assertThat(location.approximate()).isFalse();
+    }
+
+    @Test
+    void flagsApproximateLocationsSeparatelyFromExactOnes() {
+        Transaction approximate = transaction(LocalDate.of(2026, 1, 5), "KFC", "75.00", "Dining");
+        approximate.setLatitude(-33.9249);
+        approximate.setLongitude(18.4241);
+        approximate.setLocationApproximate(true);
+
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(approximate));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.locations()).hasSize(1);
+        assertThat(summary.locations().get(0).approximate()).isTrue();
+    }
 }

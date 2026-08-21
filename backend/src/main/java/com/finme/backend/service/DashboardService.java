@@ -3,6 +3,7 @@ package com.finme.backend.service;
 import com.finme.backend.dto.DashboardSummaryResponse;
 import com.finme.backend.dto.DashboardSummaryResponse.CategoryAmount;
 import com.finme.backend.dto.DashboardSummaryResponse.MonthlyAmount;
+import com.finme.backend.dto.DashboardSummaryResponse.SpendLocation;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.repository.TransactionRepository;
@@ -57,7 +58,12 @@ public class DashboardService {
                 .map(entry -> new MonthlyAmount(entry.getKey(), entry.getValue()))
                 .toList();
 
-        return new DashboardSummaryResponse(totalSpend, categoryBreakdown, trend);
+        List<SpendLocation> locations = transactions.stream()
+                .filter(t -> t.getLatitude() != null && t.getLongitude() != null)
+                .map(t -> new SpendLocation(t.getMerchant(), t.getAmount(), t.getLatitude(), t.getLongitude(), t.isLocationApproximate()))
+                .toList();
+
+        return new DashboardSummaryResponse(totalSpend, categoryBreakdown, trend, locations);
     }
 
     private String categoryOrUncategorized(Transaction transaction) {
