@@ -8,6 +8,7 @@ import com.finme.backend.entity.PaymentMethod;
 import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.entity.Transaction;
+import com.finme.backend.entity.TransactionDirection;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.StatementProcessingException;
 import com.finme.backend.geocoding.TransactionGeocoder;
@@ -88,6 +89,7 @@ public class StatementIngestionService {
         transaction.setCategory(et.category());
         transaction.setDescription(et.description());
         transaction.setPaymentMethod(PaymentMethod.CARD);
+        transaction.setDirection(TransactionDirection.fromExtracted(et.direction()));
         transaction.setStatus(TransactionStatus.ACTIVE);
         transactionGeocoder.enrich(transaction, et);
         return transaction;

@@ -4,6 +4,7 @@ import com.finme.backend.dto.DashboardSummaryResponse;
 import com.finme.backend.entity.PaymentMethod;
 import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
+import com.finme.backend.entity.TransactionDirection;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,19 @@ class DashboardServiceTest {
         t.setCategory(category);
         t.setPaymentMethod(PaymentMethod.CARD);
         t.setStatus(TransactionStatus.ACTIVE);
+        return t;
+    }
+
+    /** Same as transaction(), but money coming in - a salary/deposit or a refund. */
+    private static Transaction credit(LocalDate date, String merchant, String amount, String category) {
+        Transaction t = transaction(date, merchant, amount, category);
+        t.setDirection(TransactionDirection.CREDIT);
+        return t;
+    }
+
+    private static Transaction located(Transaction t, double lat, double lng) {
+        t.setLatitude(lat);
+        t.setLongitude(lng);
         return t;
     }
 
@@ -159,5 +173,88 @@ class DashboardServiceTest {
 
         assertThat(summary.locations()).hasSize(1);
         assertThat(summary.locations().get(0).approximate()).isTrue();
+    }
+
+    @Test
+    void incomeIsExcludedFromTotalSpendEntirely() {
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(
+                        credit(LocalDate.of(2026, 7, 1), "Salary", "18500.00", "Income"),
+                        transaction(LocalDate.of(2026, 7, 2), "Woolworths", "842.15", "Groceries")
+                ));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.totalSpend()).isEqualByComparingTo(new BigDecimal("842.15"));
+        assertThat(summary.categoryBreakdown()).extracting(DashboardSummaryResponse.CategoryAmount::category)
+                .doesNotContain("Income");
+    }
+
+    @Test
+    void refundSubtractsFromSpendAndFromItsOwnCategory() {
+        // The refund carries category "Groceries", not "Income" - which is correct, it is a
+        // groceries refund. Only its direction distinguishes it from a purchase, which is the
+        // whole reason direction is stored rather than inferred from category.
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(
+                        transaction(LocalDate.of(2026, 7, 2), "Woolworths", "842.15", "Groceries"),
+                        transaction(LocalDate.of(2026, 7, 17), "Checkers", "1256.40", "Groceries"),
+                        credit(LocalDate.of(2026, 7, 15), "Refund Woolworths", "842.15", "Groceries")
+                ));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.totalSpend()).isEqualByComparingTo(new BigDecimal("1256.40"));
+        assertThat(summary.categoryBreakdown())
+                .singleElement()
+                .satisfies(c -> {
+                    assertThat(c.category()).isEqualTo("Groceries");
+                    assertThat(c.amount()).isEqualByComparingTo(new BigDecimal("1256.40"));
+                });
+    }
+
+    @Test
+    void refundAlsoNetsOutOfTheMonthlyTrend() {
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(
+                        transaction(LocalDate.of(2026, 7, 2), "Woolworths", "842.15", "Groceries"),
+                        credit(LocalDate.of(2026, 7, 15), "Refund Woolworths", "842.15", "Groceries"),
+                        transaction(LocalDate.of(2026, 8, 3), "Uber", "87.50", "Transport")
+                ));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.trend()).hasSize(2);
+        assertThat(summary.trend().get(0).month()).isEqualTo("2026-07");
+        assertThat(summary.trend().get(0).amount()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(summary.trend().get(1).amount()).isEqualByComparingTo(new BigDecimal("87.50"));
+    }
+
+    @Test
+    void moneyInNeverAppearsOnTheSpendMap() {
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(
+                        located(transaction(LocalDate.of(2026, 7, 2), "Woolworths", "842.15", "Groceries"), -26.1, 28.0),
+                        located(credit(LocalDate.of(2026, 7, 15), "Refund Woolworths", "842.15", "Groceries"), -26.1, 28.0),
+                        located(credit(LocalDate.of(2026, 7, 1), "Salary", "18500.00", "Income"), -26.1, 28.0)
+                ));
+
+        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
+
+        assertThat(summary.locations())
+                .singleElement()
+                .satisfies(l -> assertThat(l.merchant()).isEqualTo("Woolworths"));
+    }
+
+    @Test
+    void aTransactionWithNoDirectionSetCountsAsSpending() {
+        Transaction unset = transaction(LocalDate.of(2026, 7, 2), "Woolworths", "450.00", "Groceries");
+
+        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
+                .thenReturn(List.of(unset));
+
+        assertThat(unset.getDirection()).isEqualTo(TransactionDirection.DEBIT);
+        assertThat(dashboardService.getSummary(1L).totalSpend())
+                .isEqualByComparingTo(new BigDecimal("450.00"));
     }
 }

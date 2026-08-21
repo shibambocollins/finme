@@ -20,6 +20,12 @@ interface Transaction {
   date: string;
   merchant: string;
   amount: number;
+  /**
+   * Statements report debits and credits as separate columns of positive numbers, so the
+   * amount alone cannot say which way the money went - a R18,500 salary and a R18,500 purchase
+   * are the same number. Without this the table renders them identically.
+   */
+  direction: "DEBIT" | "CREDIT";
   category: string | null;
   description: string | null;
   paymentMethod: string;
@@ -213,7 +219,9 @@ export function Dashboard() {
                   <td>{t.merchant}</td>
                   <td>{t.category ?? "-"}</td>
                   <td>{t.description ?? "-"}</td>
-                  <td>R{t.amount.toFixed(2)}</td>
+                  <td className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
+                    {t.direction === "CREDIT" ? "+" : ""}R{t.amount.toFixed(2)}
+                  </td>
                   <td>{t.sourceType}</td>
                 </tr>
               ))}
