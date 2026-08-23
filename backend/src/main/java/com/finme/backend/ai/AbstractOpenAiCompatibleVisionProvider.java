@@ -1,9 +1,9 @@
 package com.finme.backend.ai;
 
-import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
 import java.util.Base64;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -14,51 +14,56 @@ import java.util.Map;
  */
 abstract class AbstractOpenAiCompatibleVisionProvider implements VisionAiProvider {
 
-    private final RestClient restClient;
-    private final String baseUrl;
-    private final String apiKey;
-    private final String model;
+    /**
+     * A receipt yields exactly one transaction, so the answer is small and a fixed budget is
+     * enough - unlike statement extraction, nothing here scales with input size.
+     * <p>
+     * It is set explicitly all the same, because leaving it unset is what broke the text path:
+     * Groq then applies its own 2048 default, and a reasoning model can spend nearly all of
+     * that thinking before writing any JSON. 2000 leaves ample room for one transaction while
+     * staying small against the 8000 tokens-per-minute free-tier ceiling, which the image's own
+     * prompt tokens also draw on.
+     */
+    private static final int RECEIPT_COMPLETION_TOKENS = 2000;
 
-    protected AbstractOpenAiCompatibleVisionProvider(RestClient restClient, String baseUrl, String apiKey, String model) {
-        this.restClient = restClient;
+    private final ProviderHttp http;
+    private final String baseUrl;
+    private final String model;
+    private final String providerName;
+
+    protected AbstractOpenAiCompatibleVisionProvider(
+            RestClient restClient, String baseUrl, String apiKey, String model, String providerName) {
+        this.http = new ProviderHttp(restClient, apiKey, providerName);
         this.baseUrl = baseUrl;
-        this.apiKey = apiKey;
         this.model = model;
+        this.providerName = providerName;
     }
 
-    protected abstract String providerName();
+    /** Provider-specific request fields merged into the body. Empty by default. */
+    protected Map<String, Object> extraRequestFields() {
+        return Map.of();
+    }
 
     @Override
     public List<ExtractedTransaction> extractFromImage(byte[] imageBytes, String mimeType) {
         String dataUri = "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(imageBytes);
 
-        Map<String, Object> requestBody = Map.of(
-                "model", model,
-                "messages", List.of(Map.of(
-                        "role", "user",
-                        "content", List.of(
-                                Map.of("type", "text", "text", AiExtractionSupport.buildReceiptPrompt()),
-                                Map.of("type", "image_url", "image_url", Map.of("url", dataUri))
-                        )
-                )),
-                "response_format", Map.of("type", "json_object"),
-                "temperature", 0.1
-        );
+        Map<String, Object> requestBody = new LinkedHashMap<>();
+        requestBody.put("model", model);
+        requestBody.put("messages", List.of(Map.of(
+                "role", "user",
+                "content", List.of(
+                        Map.of("type", "text", "text", AiExtractionSupport.buildReceiptPrompt()),
+                        Map.of("type", "image_url", "image_url", Map.of("url", dataUri))
+                )
+        )));
+        requestBody.put("response_format", Map.of("type", "json_object"));
+        requestBody.put("temperature", 0.1);
+        requestBody.put("max_tokens", RECEIPT_COMPLETION_TOKENS);
+        requestBody.putAll(extraRequestFields());
 
-        String responseBody;
-        try {
-            responseBody = restClient.post()
-                    .uri(baseUrl)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(String.class);
-        } catch (Exception ex) {
-            throw new AiProviderException(providerName() + " request failed", ex);
-        }
-
-        String content = AiExtractionSupport.extractOpenAiMessageContent(responseBody, providerName());
+        String responseBody = http.post(baseUrl, requestBody);
+        String content = AiExtractionSupport.extractOpenAiMessageContent(responseBody, providerName);
         return AiExtractionSupport.parseTransactions(content);
     }
 }
