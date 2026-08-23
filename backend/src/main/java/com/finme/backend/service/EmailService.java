@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * Thin wrapper around JavaMailSender (auto-configured once spring.mail.* is set - Gmail SMTP
- * + an App Password, see docs/07-tech-stack.md). Plain text, one message type - no reason for
- * templating machinery at this scale.
+ * + an App Password, see docs/07-tech-stack.md). Plain text throughout - at two message types
+ * there is still no reason for templating machinery.
  */
 @Service
 public class EmailService {
@@ -39,6 +39,20 @@ public class EmailService {
                         + verificationLink
                         + "\n\nThis link expires in 24 hours. If you didn't create a FinMe account, "
                         + "you can ignore this email.");
+
+        mailSender.send(message);
+    }
+
+    /**
+     * Sends the weekly spend analysis (FR-1.8.2). Subject and body arrive already composed by
+     * WeeklySpendAnalysisService - this class stays a transport, with no opinion about content.
+     */
+    public void sendWeeklySpendAnalysis(String toEmail, String subject, String body) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
+        message.setTo(toEmail);
+        message.setSubject(subject);
+        message.setText(body);
 
         mailSender.send(message);
     }
