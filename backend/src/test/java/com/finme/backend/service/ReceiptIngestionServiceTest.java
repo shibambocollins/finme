@@ -39,7 +39,7 @@ class ReceiptIngestionServiceTest {
             receiptRepository, transactionRepository, visionAiProvider);
 
     private static MockMultipartFile jpegFile() {
-        return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", new byte[]{1, 2, 3});
+        return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", TestImages.jpeg());
     }
 
     private void stubReceiptSaveAssignsId(Long id) {

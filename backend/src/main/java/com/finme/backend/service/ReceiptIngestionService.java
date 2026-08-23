@@ -10,7 +10,9 @@ import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionDirection;
 import com.finme.backend.entity.TransactionStatus;
+import com.finme.backend.exception.InvalidReceiptFileException;
 import com.finme.backend.exception.ReceiptProcessingException;
+import com.finme.backend.exception.UnrecognisedDocumentException;
 import com.finme.backend.repository.ReceiptRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
@@ -49,13 +51,34 @@ public class ReceiptIngestionService {
 
         try {
             byte[] imageBytes = file.getBytes();
+            if (!FileSignature.isSupportedImage(imageBytes)) {
+                throw new InvalidReceiptFileException(
+                        "That file is not a JPEG or PNG image. Take a photo of the receipt and "
+                                + "upload that.");
+            }
+
             List<ExtractedTransaction> extracted = visionAiProvider.extractFromImage(imageBytes, file.getContentType());
+
+            // The prompt tells the model to return an empty list when the image is not a
+            // receipt. Acting on that is what turns "nothing happened" into an explanation.
+            if (extracted.isEmpty()) {
+                throw new UnrecognisedDocumentException(
+                        "No purchase found in that image. It does not look like a receipt - "
+                                + "make sure the whole slip is visible and in focus.");
+            }
 
             for (ExtractedTransaction et : extracted) {
                 transactionRepository.save(toTransaction(userId, receipt.getId(), et));
             }
 
             receipt.setStatus(ReceiptStatus.COMPLETE);
+        } catch (InvalidReceiptFileException | UnrecognisedDocumentException ex) {
+            // Mark the receipt FAILED and propagate unwrapped. Without this branch these would
+            // escape the try with the row left in PROCESSING - a receipt permanently stuck
+            // mid-flight because the user uploaded the wrong picture.
+            receipt.setStatus(ReceiptStatus.FAILED);
+            receiptRepository.save(receipt);
+            throw ex;
         } catch (IOException | AllAiProvidersFailedException ex) {
             receipt.setStatus(ReceiptStatus.FAILED);
             receiptRepository.save(receipt);
