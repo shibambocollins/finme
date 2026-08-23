@@ -3,7 +3,6 @@ package com.finme.backend.service;
 import com.finme.backend.dto.DashboardSummaryResponse;
 import com.finme.backend.dto.DashboardSummaryResponse.CategoryAmount;
 import com.finme.backend.dto.DashboardSummaryResponse.MonthlyAmount;
-import com.finme.backend.dto.DashboardSummaryResponse.SpendLocation;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionDirection;
 import com.finme.backend.entity.TransactionStatus;
@@ -65,15 +64,7 @@ public class DashboardService {
                 .map(entry -> new MonthlyAmount(entry.getKey(), entry.getValue()))
                 .toList();
 
-        // Money-in rows are excluded: the map answers "where did I spend", and a salary
-        // deposit or a refund has no meaningful place on it.
-        List<SpendLocation> locations = spendRelated.stream()
-                .filter(t -> t.getDirection() != TransactionDirection.CREDIT)
-                .filter(t -> t.getLatitude() != null && t.getLongitude() != null)
-                .map(t -> new SpendLocation(t.getMerchant(), t.getAmount(), t.getLatitude(), t.getLongitude(), t.isLocationApproximate()))
-                .toList();
-
-        return new DashboardSummaryResponse(totalSpend, categoryBreakdown, trend, locations);
+        return new DashboardSummaryResponse(totalSpend, categoryBreakdown, trend);
     }
 
     /**
