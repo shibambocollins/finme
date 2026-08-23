@@ -4,6 +4,8 @@ import com.finme.backend.dto.DashboardSummaryResponse;
 import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
+import com.finme.backend.entity.BankStatement;
+import com.finme.backend.repository.BankStatementRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -42,9 +44,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 // envFile), with the same defaults the main properties file uses.
 @SpringBootTest(properties = {
         "ai.provider=chain",
-        "geocoding.provider=opencage",
-        "opencage.api-key=${OPENCAGE_API_KEY:}",
-        "opencage.country-code=${OPENCAGE_COUNTRY_CODE:za}",
         "groq.api-key=${GROQ_API_KEY:}",
         "groq.model=${GROQ_MODEL:openai/gpt-oss-20b}",
         "groq.vision-model=${GROQ_VISION_MODEL:qwen/qwen3.6-27b}",
@@ -103,15 +102,18 @@ class LiveExtractionSmokeTest {
     private TransactionRepository transactionRepository;
 
     @Autowired
+    private BankStatementRepository bankStatementRepository;
+
+    @Autowired
     private DashboardService dashboardService;
 
     @Test
-    void extractsEveryTransactionFromARealStatementViaTheRealChain() throws IOException {
+    void extractsEveryTransactionFromARealStatementViaTheRealChain() throws IOException, InterruptedException {
         MockMultipartFile file = new MockMultipartFile(
                 "file", "statement.pdf", "application/pdf", buildStatementPdf());
 
         long startedAt = System.currentTimeMillis();
-        var statement = statementIngestionService.ingest(USER_ID, file);
+        var statement = awaitSettled(statementIngestionService.ingest(USER_ID, file).getId());
         long elapsedMs = System.currentTimeMillis() - startedAt;
 
         List<Transaction> saved = transactionRepository
@@ -121,18 +123,17 @@ class LiveExtractionSmokeTest {
         System.out.println("\n================ LIVE EXTRACTION RESULT ================");
         System.out.printf("status=%s  elapsed=%.1fs  extracted=%d (expected %d)%n",
                 statement.getStatus(), elapsedMs / 1000.0, saved.size(), EXPECTED_TRANSACTIONS);
-        System.out.printf("%-12s %-32s %10s  %-7s %-14s %s%n",
-                "DATE", "MERCHANT", "AMOUNT", "DIR", "CATEGORY", "GEOCODED");
+        System.out.printf("%-12s %-32s %10s  %-7s %s%n",
+                "DATE", "MERCHANT", "AMOUNT", "DIR", "CATEGORY");
         System.out.println("-".repeat(100));
         saved.stream()
                 .sorted((a, b) -> a.getDate().compareTo(b.getDate()))
-                .forEach(t -> System.out.printf("%-12s %-32s %10s  %-7s %-14s %s%n",
+                .forEach(t -> System.out.printf("%-12s %-32s %10s  %-7s %s%n",
                         t.getDate(),
                         truncate(t.getMerchant(), 31),
                         t.getAmount(),
                         t.getDirection(),
-                        t.getCategory(),
-                        t.getLatitude() == null ? "-" : t.getLatitude() + "," + t.getLongitude()));
+                        t.getCategory()));
         System.out.println("-".repeat(100));
         System.out.println("DASHBOARD total spend : " + summary.totalSpend());
         System.out.println("TRUE net spend        : " + TRUE_SPEND
@@ -141,12 +142,6 @@ class LiveExtractionSmokeTest {
         System.out.println("CATEGORY BREAKDOWN    :");
         summary.categoryBreakdown()
                 .forEach(c -> System.out.printf("    %-16s %s%n", c.category(), c.amount()));
-        System.out.println("MAP PINS              : " + summary.locations().size()
-                + " placed, " + summary.locations().stream()
-                .map(l -> l.latitude() + "," + l.longitude()).distinct().count() + " distinct");
-        summary.locations().forEach(l -> System.out.printf("    %-32s %s,%s%s%n",
-                truncate(l.merchant(), 31), l.latitude(), l.longitude(),
-                l.approximate() ? "  (approximate)" : "  (exact)"));
         System.out.println("========================================================\n");
 
         assertThat(statement.getStatus()).isEqualTo(StatementStatus.COMPLETE);
@@ -157,6 +152,23 @@ class LiveExtractionSmokeTest {
         assertThat(summary.categoryBreakdown())
                 .as("Income is money in, never a category of spend")
                 .noneMatch(c -> "Income".equalsIgnoreCase(c.category()));
+    }
+
+    /**
+     * Waits out the background extraction. The timeout is generous because that is precisely
+     * what this test exercises: a large statement is deliberately paced by provider rate limits
+     * and legitimately takes minutes.
+     */
+    private BankStatement awaitSettled(Long statementId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 600_000;
+        while (System.currentTimeMillis() < deadline) {
+            BankStatement statement = bankStatementRepository.findById(statementId).orElseThrow();
+            if (statement.getStatus() != StatementStatus.PROCESSING) {
+                return statement;
+            }
+            Thread.sleep(250);
+        }
+        throw new AssertionError("Statement " + statementId + " was still PROCESSING after 10 minutes");
     }
 
     private static String truncate(String value, int max) {
@@ -176,6 +188,95 @@ class LiveExtractionSmokeTest {
                     content.newLineAtOffset(0, -14);
                 }
                 content.endText();
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            return out.toByteArray();
+        }
+    }
+
+    /**
+     * The size that actually broke in production use. A 16-row statement fits in one call and
+     * proves nothing about chunking, rate limits, or retry - this one needs six calls and more
+     * tokens than the free tier allows in a minute, so it exercises the paths that failed.
+     */
+    @Test
+    void handlesAStatementTooLargeForASingleCall() throws IOException, InterruptedException {
+        long userId = 990002L;
+        int rows = 80;
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "large-statement.pdf", "application/pdf", buildLargeStatementPdf(rows));
+
+        long startedAt = System.currentTimeMillis();
+        var statement = awaitSettled(statementIngestionService.ingest(userId, file).getId());
+        double elapsed = (System.currentTimeMillis() - startedAt) / 1000.0;
+
+        List<Transaction> saved = transactionRepository
+                .findByUserIdAndStatusOrderByDateDesc(userId, TransactionStatus.ACTIVE);
+
+        System.out.println("\n============ LARGE STATEMENT ============");
+        System.out.printf("rows in statement : %d%n", rows);
+        System.out.printf("extracted         : %d%n", saved.size());
+        System.out.printf("elapsed           : %.1fs%n", elapsed);
+        System.out.printf("status            : %s%n", statement.getStatus());
+        System.out.println("========================================\n");
+
+        assertThat(statement.getStatus()).isEqualTo(StatementStatus.COMPLETE);
+        // Exact-count assertions are wrong at this size: the fixture repeats merchants, so a
+        // model may legitimately merge or split a row. What must hold is that chunking did not
+        // quietly lose most of the statement - the old behaviour returned 18 of 80.
+        assertThat(saved.size())
+                .as("chunked extraction should recover nearly all rows, not a truncated head")
+                .isGreaterThanOrEqualTo((int) (rows * 0.9));
+    }
+
+    private static byte[] buildLargeStatementPdf(int rows) throws IOException {
+        String[] merchants = {
+                "WOOLWORTHS SANDTON CITY", "UBER TRIP CAPE TOWN", "SHELL GARAGE RIVONIA",
+                "NETFLIX SUBSCRIPTION", "KFC V&A WATERFRONT", "CITY OF JHB ELECTRICITY",
+                "CLICKS PHARMACY ROSEBANK", "CHECKERS HYPER FOURWAYS", "VODACOM PREPAID AIRTIME",
+                "NANDOS MELROSE ARCH", "GAUTRAIN CARD RECHARGE", "DISCOVERY HEALTH PREMIUM",
+                "PICK N PAY MENLYN", "BANK CHARGES MONTHLY FEE", "TAKEALOT ONLINE ORDER",
+                "SPAR PARKTOWN NORTH"};
+
+        List<String> lines = new java.util.ArrayList<>(List.of(
+                "STANDARD BANK - Cheque Account Statement",
+                "Statement Period: 01 July 2026 to 31 July 2026",
+                "Date     Description                        Debit     Credit"));
+        java.util.Random random = new java.util.Random(7);
+        for (int i = 0; i < rows; i++) {
+            double amount = 35 + random.nextDouble() * 2365;
+            lines.add(String.format("%02d Jul   %-34s %8.2f", (i % 28) + 1, merchants[i % merchants.length], amount));
+        }
+
+        try (PDDocument document = new PDDocument()) {
+            PDPageContentStream content = null;
+            int lineOnPage = 0;
+            PDPage page = null;
+            try {
+                for (String line : lines) {
+                    if (content == null || lineOnPage >= 60) {
+                        if (content != null) {
+                            content.endText();
+                            content.close();
+                        }
+                        page = new PDPage();
+                        document.addPage(page);
+                        content = new PDPageContentStream(document, page);
+                        content.setFont(new PDType1Font(Standard14Fonts.FontName.COURIER), 9);
+                        content.beginText();
+                        content.newLineAtOffset(40, 780);
+                        lineOnPage = 0;
+                    }
+                    content.showText(line);
+                    content.newLineAtOffset(0, -12);
+                    lineOnPage++;
+                }
+            } finally {
+                if (content != null) {
+                    content.endText();
+                    content.close();
+                }
             }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             document.save(out);
