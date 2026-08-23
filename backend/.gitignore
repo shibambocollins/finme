@@ -35,3 +35,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Real labeled documents for the extraction evaluation harness. Real bank statements and
+# receipt photos contain real financial data and must never be committed to a public
+# portfolio repo. The harness falls back to its synthetic set when this is empty, so the
+# build works for anyone cloning without them (see GoldenSet). The README is kept so the
+# label format travels with the project even though the documents themselves do not.
+src/test/resources/golden/**
+!src/test/resources/golden/README.md

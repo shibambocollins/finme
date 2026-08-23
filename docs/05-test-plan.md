@@ -33,6 +33,52 @@ pipeline that is right 95% of the time versus 70% of the time is the difference 
 tool someone can trust and one that quietly misleads them. The number needs to be known, not
 assumed.
 
+**Implementation (built 2026-08-23).** `ExtractionEvaluationHarnessTest`, run on demand:
+
+```bash
+cd backend
+./mvnw test -Dtest=ExtractionEvaluationHarnessTest -Dlive.ai=true
+```
+
+Gated behind `-Dlive.ai=true` because it spends real API quota; a normal `./mvnw test` skips
+it. The report prints and is written to `target/extraction-evaluation.txt` so runs can be
+compared over time.
+
+- A reported transaction matches a labeled one on **date and amount**. Merchant text is
+  excluded from matching — models paraphrase it, and scoring on string equality would report a
+  naming difference as both a miss and an invention.
+- Pairing is one-to-one, so a transaction reported twice scores one match and one invention.
+  This is what catches duplicate-inflation bugs, which otherwise look like perfect recall.
+- Category accuracy is scored over matched transactions only, so a detection failure is
+  counted once (against recall) rather than twice.
+- A document the chain cannot process at all counts as a total miss, never as a skip —
+  dropping the hardest cases would quietly raise the average.
+- The harness's own arithmetic is unit-tested in `ExtractionEvaluatorTest`. A harness whose
+  scoring is itself unverified would report confident numbers about accuracy while being wrong,
+  which is the exact habit it exists to break.
+
+Real labeled documents live in `backend/src/test/resources/golden/` and are gitignored — they
+contain real financial data. When that directory is empty the harness falls back to a generated
+synthetic set and labels the report `SYNTHETIC`. Synthetic documents are clean (no scan skew,
+no column drift, no faded thermal print), so those scores are a **floor on difficulty, not a
+sample of it**. See that directory's README for the label format.
+
+**First measured run (2026-08-23, synthetic set, Groq primary):**
+
+| | PDF (statements) | Photo (receipts) |
+|---|---|---|
+| documents | 4 | 3 |
+| precision | 1.000 | 1.000 |
+| recall | 1.000 | 1.000 |
+| F1 | 1.000 | 1.000 |
+| category accuracy | 0.851 | 1.000 |
+| hallucination rate | 0.000 | 0.000 |
+
+Detection is not the weak point on clean input; **categorisation is**. The failures are
+systematic rather than random — Woolworths and Checkers read as "Shopping" instead of
+"Groceries", Shell as "Utilities" instead of "Transport" — which suggests the fix is category
+definitions in the prompt, not a better model.
+
 ## 3. Security & Privacy Testing
 
 - Unit test asserting the Redaction Service strips known account-number and ID-number
