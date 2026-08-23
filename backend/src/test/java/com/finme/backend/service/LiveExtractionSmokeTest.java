@@ -128,6 +128,9 @@ class LiveExtractionSmokeTest {
     private ReceiptIngestionService receiptIngestionService;
 
     @Autowired
+    private com.finme.backend.ai.AiProvider aiProvider;
+
+    @Autowired
     private DashboardService dashboardService;
 
     @Test
@@ -462,5 +465,42 @@ class LiveExtractionSmokeTest {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ImageIO.write(image, "jpg", out);
         return out.toByteArray();
+    }
+
+    /**
+     * Manual entry against real providers (FR-1.5.1, FR-1.5.2). A fixed reference date is passed
+     * in rather than the system clock, so the relative-date assertion is deterministic and does
+     * not depend on when the suite runs.
+     */
+    @Test
+    void parsesPlainLanguageSpendingViaTheRealChain() {
+        LocalDate reference = LocalDate.of(2026, 7, 20);
+
+        var lunch = aiProvider.parseManualEntry("I bought lunch for R150 today, paid cash", reference);
+        var coffee = aiProvider.parseManualEntry("coffee R45.50 at Vida yesterday", reference);
+
+        System.out.println("\n============ LIVE MANUAL ENTRY ============");
+        printEntries("today, cash", lunch);
+        printEntries("yesterday", coffee);
+        System.out.println("==========================================\n");
+
+        assertThat(lunch).hasSize(1);
+        assertThat(lunch.get(0).amount()).isEqualByComparingTo(new java.math.BigDecimal("150.00"));
+        assertThat(lunch.get(0).date()).isEqualTo(reference);
+        assertThat(lunch.get(0).paymentMethod()).isEqualToIgnoringCase("CASH");
+        assertThat(lunch.get(0).direction()).isEqualToIgnoringCase("DEBIT");
+
+        assertThat(coffee).hasSize(1);
+        assertThat(coffee.get(0).amount()).isEqualByComparingTo(new java.math.BigDecimal("45.50"));
+        assertThat(coffee.get(0).date())
+                .as("\"yesterday\" must resolve against the date the application supplied")
+                .isEqualTo(reference.minusDays(1));
+    }
+
+    private static void printEntries(String label, List<com.finme.backend.ai.ExtractedTransaction> entries) {
+        System.out.printf("  %-12s -> %s%n", label, entries.isEmpty() ? "(nothing parsed)" : "");
+        entries.forEach(e -> System.out.printf("      %s  %-20s %8s  %-7s %-6s %s%n",
+                e.date(), truncate(e.merchant(), 19), e.amount(),
+                e.direction(), e.paymentMethod(), e.category()));
     }
 }

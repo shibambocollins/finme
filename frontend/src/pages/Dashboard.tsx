@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Bar,
   BarChart,
@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAuth } from "../auth/AuthContext";
-import { apiGet, apiPostForm, ApiError } from "../api/client";
+import { apiGet, apiPostForm, apiPostJson, ApiError } from "../api/client";
 
 interface Transaction {
   id: number;
@@ -71,6 +71,8 @@ export function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [manualText, setManualText] = useState("");
+  const [loggingManual, setLoggingManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
@@ -129,6 +131,25 @@ export function Dashboard() {
       setUploading(false);
       setUploadProgress(null);
       event.target.value = "";
+    }
+  };
+
+  const handleManualEntry = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!manualText.trim()) return;
+
+    setError(null);
+    setLoggingManual(true);
+    try {
+      await apiPostJson<Transaction[]>("/api/transactions/manual", { text: manualText.trim() }, token);
+      // Cleared only after the call succeeds - on failure the user keeps what they typed and
+      // can adjust it, rather than having to retype the whole description.
+      setManualText("");
+      await loadDashboard();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not log that entry");
+    } finally {
+      setLoggingManual(false);
     }
   };
 
@@ -200,6 +221,19 @@ export function Dashboard() {
             hidden
           />
         </label>
+        <form className="manual-entry" onSubmit={handleManualEntry}>
+          <input
+            type="text"
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder="Or type a cash purchase: lunch R150 cash today"
+            maxLength={500}
+            disabled={loggingManual}
+          />
+          <button type="submit" disabled={loggingManual || !manualText.trim()}>
+            {loggingManual ? "Logging..." : "Log"}
+          </button>
+        </form>
         {error && <p className="form-error">{error}</p>}
       </section>
 
