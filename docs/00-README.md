@@ -26,7 +26,7 @@ Claude Code must follow.
 ## Phase Summary
 
 **Phase 1 — Personal Finance Tracker.** Upload bank statements (PDF) and receipts/invoices
-(photo), automatic transaction extraction and categorization, spend dashboard (map, charts,
+(photo), automatic transaction extraction and categorization, spend dashboard (charts,
 trends), cash-entry via natural language, weekly AI-generated spend analysis, measured
 extraction accuracy via an evaluation harness.
 

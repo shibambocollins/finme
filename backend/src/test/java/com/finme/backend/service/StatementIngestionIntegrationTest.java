@@ -6,6 +6,7 @@ import com.finme.backend.ai.VisionAiProvider;
 import com.finme.backend.entity.BankStatement;
 import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.entity.TransactionStatus;
+import com.finme.backend.repository.BankStatementRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ class StatementIngestionIntegrationTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private BankStatementRepository bankStatementRepository;
 
     @Autowired
     private CapturingAiProvider capturingAiProvider;
@@ -76,12 +80,33 @@ class StatementIngestionIntegrationTest {
         }
     }
 
+    /**
+     * Polls until the background extraction leaves PROCESSING. A fixed sleep would either be
+     * flaky or needlessly slow; this returns as soon as the work is actually done.
+     */
+    private BankStatement awaitSettled(Long statementId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 30_000;
+        while (System.currentTimeMillis() < deadline) {
+            BankStatement statement = bankStatementRepository.findById(statementId).orElseThrow();
+            if (statement.getStatus() != StatementStatus.PROCESSING) {
+                return statement;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("Statement " + statementId + " was still PROCESSING after 30s");
+    }
+
     @Test
     void uploadedStatementIsExtractedRedactedAndPersistedWithoutLeakingPiiToTheAiCall() throws Exception {
         byte[] pdfBytes = SamplePdfFixture.buildSampleStatementPdf();
         MockMultipartFile file = new MockMultipartFile("file", "statement.pdf", "application/pdf", pdfBytes);
 
-        BankStatement result = statementIngestionService.ingest(1L, file);
+        BankStatement accepted = statementIngestionService.ingest(1L, file);
+
+        // ingest() now only records the upload - extraction runs on a background thread, so the
+        // response is PROCESSING and the test has to wait for the work rather than assume it.
+        assertThat(accepted.getStatus()).isEqualTo(StatementStatus.PROCESSING);
+        BankStatement result = awaitSettled(accepted.getId());
 
         assertThat(result.getStatus()).isEqualTo(StatementStatus.COMPLETE);
         assertThat(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE)).isNotEmpty();
