@@ -28,8 +28,7 @@ final class AiExtractionSupport {
                 + "commentary:\n"
                 + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
                 + "\"amount\": number, \"direction\": \"DEBIT or CREDIT\", "
-                + "\"category\": \"string\", \"description\": \"string\", "
-                + "\"locationHint\": \"string or null\"}]}\n"
+                + "\"category\": \"string\", \"description\": \"string\"}]}\n"
                 + "Always report \"amount\" as a POSITIVE number, and use \"direction\" to say "
                 + "which way the money moved: \"DEBIT\" for money leaving the account "
                 + "(purchases, fees, debit orders - the Debit column) and \"CREDIT\" for money "
@@ -38,13 +37,8 @@ final class AiExtractionSupport {
                 + "keeps the category of whatever was originally bought - a returned grocery "
                 + "item is still \"Groceries\" - and is marked CREDIT.\n"
                 + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
-                + "Dining, Shopping, Health, Income, Other. Card statement merchant lines often "
-                + "carry a branch, suburb, or city name alongside the merchant (e.g. "
-                + "\"KFC V&A WATERFRONT\" or \"WOOLWORTHS SANDTON\") - set \"locationHint\" to "
-                + "that place name only (e.g. \"V&A Waterfront\" or \"Sandton\"), not a full "
-                + "street address (statements never print one). Use null if the merchant text "
-                + "has no identifiable place name. If no transactions are found, return "
-                + "{\"transactions\": []}.\n\n"
+                + "Dining, Shopping, Health, Income, Other. If no transactions are found, "
+                + "return {\"transactions\": []}.\n\n"
                 + "Statement text:\n" + redactedText;
     }
 
@@ -62,20 +56,15 @@ final class AiExtractionSupport {
                 + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
                 + "\"amount\": number, \"direction\": \"DEBIT or CREDIT\", "
                 + "\"category\": \"string\", \"description\": \"string\", "
-                + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\", \"address\": \"string or null\", "
-                + "\"locationHint\": \"string or null\"}]}\n"
+                + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\"}]}\n"
                 + "Report \"amount\" as a POSITIVE number. \"direction\" is \"DEBIT\" for an "
                 + "ordinary purchase receipt; use \"CREDIT\" only when the slip is explicitly a "
                 + "refund, return, or credit note.\n"
                 + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
                 + "Dining, Shopping, Health, Income, Other. Use today's date if no date is "
                 + "visible on the receipt. If paymentMethod isn't shown or determinable, use "
-                + "\"UNKNOWN\". Set \"address\" to the store's full street address exactly as "
-                + "printed on the receipt; use null if no full address is printed. Separately, "
-                + "set \"locationHint\" to a branch, suburb, or city name identifiable on the "
-                + "receipt even without a full address (e.g. a store name reading \"KFC - Cape "
-                + "Town CBD\" -> locationHint \"Cape Town CBD\"); use null if none is "
-                + "identifiable. If this image is not a receipt, return {\"transactions\": []}.";
+                + "\"UNKNOWN\". If this image is not a receipt, return "
+                + "{\"transactions\": []}.";
     }
 
     /**
@@ -194,12 +183,9 @@ final class AiExtractionSupport {
             String category = node.has("category") ? node.get("category").asText() : null;
             String description = node.has("description") ? node.get("description").asText() : null;
             String paymentMethod = node.has("paymentMethod") ? node.get("paymentMethod").asText() : null;
-            String address = optionalText(node, "address");
-            String locationHint = optionalText(node, "locationHint");
             String direction = optionalText(node, "direction");
             return new ExtractedTransaction(
-                    date, merchant, amount, category, description, paymentMethod, address, locationHint,
-                    direction);
+                    date, merchant, amount, category, description, paymentMethod, direction);
         } catch (DateTimeParseException | NumberFormatException | ArithmeticException | NullPointerException ex) {
             // Skip a malformed entry rather than guess at bad financial data - the rest of
             // the batch is still usable.

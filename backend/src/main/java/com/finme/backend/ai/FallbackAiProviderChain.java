@@ -31,11 +31,22 @@ public class FallbackAiProviderChain implements AiProvider {
             try {
                 return provider.structureTransactions(redactedText);
             } catch (AiProviderException ex) {
-                log.warn("AI provider {} failed, falling back to next in chain: {}",
-                        provider.getClass().getSimpleName(), ex.getMessage());
+                // Log the root cause, not just ex.getMessage(). A wrapped "Groq request
+                // failed" told us nothing while the real answer - an HTTP 413 naming the
+                // exact token limit - sat one level down in the cause chain.
+                log.warn("AI provider {} failed, falling back to next in chain: {} [cause: {}]",
+                        provider.getClass().getSimpleName(), ex.getMessage(), rootCauseOf(ex));
                 lastFailure = ex;
             }
         }
         throw new AllAiProvidersFailedException(lastFailure);
+    }
+
+    private static String rootCauseOf(Throwable ex) {
+        Throwable cause = ex;
+        while (cause.getCause() != null && cause.getCause() != cause) {
+            cause = cause.getCause();
+        }
+        return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
     }
 }
