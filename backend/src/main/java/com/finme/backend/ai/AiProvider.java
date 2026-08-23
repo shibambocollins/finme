@@ -36,4 +36,13 @@ public interface AiProvider {
      * put the transaction in a different month depending on which provider answered.
      */
     List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today);
+
+    /**
+     * Narrates an already-calculated credit position as a prioritised plan (FR-2.3.1).
+     * <p>
+     * Separate from {@link #recommend} rather than sharing it: the two differ in what the model
+     * must not do. Spend narration only has to avoid inventing figures; credit narration must
+     * also avoid promising a score outcome, which is a claim no one can make honestly.
+     */
+    List<String> recommendCredit(String creditFactsSummary);
 }

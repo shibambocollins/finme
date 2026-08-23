@@ -32,6 +32,16 @@ public class MockAiProvider implements AiProvider {
     }
 
     @Override
+    public List<String> recommendCredit(String creditFactsSummary) {
+        if (creditFactsSummary == null || creditFactsSummary.isBlank()) {
+            return List.of();
+        }
+        return List.of(
+                "Mock credit step: bring your most stretched account down first.",
+                "Mock credit step: keep every account paid on time.");
+    }
+
+    @Override
     public List<String> recommend(String spendFactsSummary) {
         if (spendFactsSummary == null || spendFactsSummary.isBlank()) {
             return List.of();
