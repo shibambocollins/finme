@@ -34,12 +34,21 @@ public class CloudflareProvider implements AiProvider {
 
     @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
+        String json = run(AiExtractionSupport.buildStatementPrompt(redactedText));
+        return AiExtractionSupport.parseTransactions(json);
+    }
+
+    @Override
+    public List<String> recommend(String spendFactsSummary) {
+        String json = run(AiExtractionSupport.buildRecommendationPrompt(spendFactsSummary));
+        return AiExtractionSupport.parseRecommendations(json);
+    }
+
+    /** One Workers AI round trip, returning the balanced JSON object found in the reply. */
+    private String run(String prompt) {
         String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model;
         Map<String, Object> requestBody = Map.of(
-                "messages", List.of(Map.of(
-                        "role", "user",
-                        "content", AiExtractionSupport.buildStatementPrompt(redactedText)
-                ))
+                "messages", List.of(Map.of("role", "user", "content", prompt))
         );
 
         String responseBody;
@@ -56,7 +65,6 @@ public class CloudflareProvider implements AiProvider {
         }
 
         String resultText = AiExtractionSupport.extractCloudflareResult(responseBody);
-        String jsonObject = AiExtractionSupport.extractJsonObject(resultText);
-        return AiExtractionSupport.parseTransactions(jsonObject);
+        return AiExtractionSupport.extractJsonObject(resultText);
     }
 }
