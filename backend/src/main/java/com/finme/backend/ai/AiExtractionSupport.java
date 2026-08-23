@@ -22,6 +22,44 @@ final class AiExtractionSupport {
     }
 
     /**
+     * The merchants that actually dominate South African bank statements, named explicitly.
+     * <p>
+     * The definitions above draw the boundaries; this supplies the knowledge to place a merchant
+     * inside them. They solve different failures. A model can understand perfectly that
+     * restaurants are Dining and still not know that "NANDOS" is a restaurant - which is exactly
+     * what the harness caught, along with a Gautrain card recharge landing in Other.
+     * <p>
+     * This is domain knowledge, not tuning to a test set: the app is ZAR-only and
+     * single-country by design (see 01-project-proposal.md), so the universe of merchants a real
+     * statement contains is small, stable, and knowable. The list is drawn from the major
+     * national chains, not from the rows that happened to fail in the golden set.
+     * <p>
+     * One consequence to be honest about: several of these names do appear in the golden set, so
+     * the harness's category-accuracy figure is no longer fully independent of this prompt for
+     * those merchants. The definitions and the unlisted-merchant rule are what still generalise,
+     * and a real labeled statement is what will genuinely test this.
+     */
+    private static final String COMMON_SOUTH_AFRICAN_MERCHANTS =
+            "Common South African merchants, by category:\n"
+                    + "- Groceries: Woolworths, Checkers, Checkers Hyper, Pick n Pay, Shoprite, "
+                    + "Spar, Food Lover's Market, Makro.\n"
+                    + "- Dining: Nandos, Steers, KFC, McDonald's, Wimpy, Debonairs, Roman's "
+                    + "Pizza, Ocean Basket, Spur, Mugg & Bean, Vida e Caffe, Famous Brands.\n"
+                    + "- Transport: Shell, Engen, Sasol, BP, Total, Caltex, Astron Energy, Uber, "
+                    + "Bolt, Gautrain, SANRAL, e-toll.\n"
+                    + "- Utilities: Eskom, City of Johannesburg, City of Cape Town, City of "
+                    + "Tshwane, eThekwini, Vodacom, MTN, Telkom, Cell C, Rain, Afrihost.\n"
+                    + "- Health: Clicks, Dis-Chem, Discovery Health, Momentum Health, Medshield, "
+                    + "Bonitas, Netcare, Mediclinic.\n"
+                    + "- Entertainment: Netflix, Showmax, DStv, MultiChoice, Spotify, "
+                    + "Ster-Kinekor, Nu Metro.\n"
+                    + "- Shopping: Takealot, Mr Price, Truworths, Foschini, Edgars, Game, "
+                    + "Incredible Connection, Cotton On, Superbalist, Builders Warehouse.\n"
+                    + "- Other: bank charges from FNB, Absa, Standard Bank, Nedbank, Capitec, "
+                    + "TymeBank or Discovery Bank.\n"
+                    + "A merchant not listed here is categorised by the definitions above.\n";
+
+    /**
      * Category definitions shared by both prompts.
      * <p>
      * The bare list these replace ("Categories should be one of: ...") left every boundary to
@@ -55,7 +93,9 @@ final class AiExtractionSupport {
                     + "- Other: bank charges and account fees, transfers, and anything that does "
                     + "not clearly fit a category above. Bank fees are Other, not Utilities.\n"
                     + "When a merchant could fit more than one, the merchant's primary business "
-                    + "decides.\n";
+                    + "decides.\n"
+                    + COMMON_SOUTH_AFRICAN_MERCHANTS;
+
 
     static String buildStatementPrompt(String redactedText) {
         return "You are a financial transaction extraction assistant. Given raw bank statement "
@@ -83,6 +123,42 @@ final class AiExtractionSupport {
      * represents the same purchase as one line) plus paymentMethod, which a statement extraction
      * never needs (always CARD, set by the caller) but a receipt may show printed.
      */
+    /**
+     * Parses a free-text description of a purchase into transactions (FR-1.5.1, FR-1.5.2).
+     * <p>
+     * Today's date is supplied rather than left to the model. Users write "yesterday" and "last
+     * Friday", and a model has no reliable clock - asking it to resolve a relative date against
+     * a date it guessed is how a transaction silently lands in the wrong month, and therefore
+     * the wrong figure on the dashboard. The application knows the date; it states it.
+     * <p>
+     * Payment method defaults to CASH because that is what this feature exists for: purchases
+     * that will never appear on a statement or produce a receipt. An explicit mention of a card
+     * still wins - the default applies to silence, not to contradiction.
+     */
+    static String buildManualEntryPrompt(String naturalLanguage, java.time.LocalDate today) {
+        return "You are a financial transaction extraction assistant. Convert the user's "
+                + "description of what they spent into structured transactions. Respond with "
+                + "ONLY a JSON object of this exact shape, and nothing else - no markdown, no "
+                + "commentary:\n"
+                + "{\"transactions\": [{\"date\": \"YYYY-MM-DD\", \"merchant\": \"string\", "
+                + "\"amount\": number, \"direction\": \"DEBIT or CREDIT\", "
+                + "\"category\": \"string\", \"description\": \"string\", "
+                + "\"paymentMethod\": \"CASH or CARD or UNKNOWN\"}]}\n"
+                + "Today's date is " + today + ". Resolve any relative date - \"today\", "
+                + "\"yesterday\", \"last Friday\" - against that date, and never invent a date "
+                + "outside it. If the user gives no date at all, use today's date.\n"
+                + "Report \"amount\" as a POSITIVE number. Use \"direction\" DEBIT for money "
+                + "spent and CREDIT only if the user describes money received.\n"
+                + "Set \"paymentMethod\" to CASH unless the user says otherwise; use CARD when "
+                + "they mention a card, and UNKNOWN only if they explicitly say they do not "
+                + "know.\n"
+                + "If the user names no merchant, use a short description of the purchase as the "
+                + "merchant. If the text describes no purchase at all, return "
+                + "{\"transactions\": []}.\n"
+                + CATEGORY_GUIDE
+                + "\nUser description:\n" + naturalLanguage;
+    }
+
     static String buildReceiptPrompt() {
         return "You are a financial transaction extraction assistant. This image is a photo of "
                 + "a single purchase receipt. Extract ONE transaction representing the receipt's "
