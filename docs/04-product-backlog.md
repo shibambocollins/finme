@@ -10,7 +10,7 @@ iteration should end in something runnable, not a partial slice of several featu
 3. Redaction & Privacy Layer
 4. AI Categorization & Fallback Chain
 5. Manual/Cash Entry
-6. Dashboard & Visualization (charts/trends first, map later)
+6. Dashboard & Visualization (charts and trends)
 7. Receipt Ingestion Pipeline
 8. Duplicate Detection
 9. Notifications
@@ -62,14 +62,15 @@ the statement later confirms the same purchase.
 - As a user, I want cash purchases to never be flagged as duplicates, since they won't appear
   on my statement.
 
-## Iteration 5 — Map Visualization & Full Dashboard
+## Iteration 5 — Full Dashboard
 
 Goal: complete the dashboard as originally scoped.
 
-- As a user, I want to see my spending plotted on a map, so that I can visualize where I
-  spend geographically.
 - As a user, I want AI-generated recommendations shown alongside my dashboard, so that I get
   actionable insight, not just raw numbers.
+
+The map-visualization story was built during this iteration and then descoped on 2026-08-22 —
+see `01-project-proposal.md`, Out of Scope (v1).
 
 ## Iteration 6 — Notifications & Evaluation Harness
 

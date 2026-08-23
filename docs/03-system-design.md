@@ -42,7 +42,7 @@ through business logic.
   exact amount match; on match, flags the receipt-sourced record `superseded` and keeps the
   statement record as authoritative. Never runs against cash-sourced transactions.
 - **Dashboard/Analytics Service** — aggregates transactions for category totals, trend
-  series, map coordinates (where available), and recent-activity feed.
+  series, and recent-activity feed.
 - **Notification Service** — scheduled job (Spring `@Scheduled`) generating and emailing the
   weekly spend analysis.
 - **Credit Module Service** — manages `CreditProfile`, `CreditAccount`, and `CreditSnapshot`
