@@ -12,7 +12,6 @@ import {
 } from "recharts";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet, apiPostForm, ApiError } from "../api/client";
-import { SpendMap, type SpendLocation } from "../components/SpendMap";
 
 interface Transaction {
   id: number;
@@ -35,7 +34,12 @@ interface Transaction {
 interface BankStatementResponse {
   id: number;
   uploadDate: string;
-  status: string;
+  status: "PROCESSING" | "COMPLETE" | "FAILED";
+  /** Chunk progress while PROCESSING - null until extraction has started. */
+  totalChunks: number | null;
+  processedChunks: number | null;
+  /** Populated only when status is FAILED. */
+  failureReason: string | null;
 }
 
 interface ReceiptResponse {
@@ -48,7 +52,6 @@ interface DashboardSummary {
   totalSpend: number;
   categoryBreakdown: { category: string; amount: number }[];
   trend: { month: string; amount: number }[];
-  locations: SpendLocation[];
 }
 
 const ACCENT = "#aa3bff";
@@ -59,6 +62,7 @@ export function Dashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,17 +92,50 @@ export function Dashboard() {
 
     setError(null);
     setUploading(true);
+    setUploadProgress("Uploading...");
     try {
       const form = new FormData();
       form.append("file", file);
-      await apiPostForm<BankStatementResponse>("/api/statements", form, token);
-      await loadDashboard();
+      // The server answers 202 as soon as it has stored the file - the transactions do not
+      // exist yet. Extraction is paced by AI provider rate limits and can take minutes on a
+      // large statement, so progress is polled rather than awaited in the request.
+      const accepted = await apiPostForm<BankStatementResponse>("/api/statements", form, token);
+      const settled = await pollUntilSettled(accepted.id);
+
+      if (settled.status === "FAILED") {
+        setError(settled.failureReason ?? "Statement processing failed");
+      } else {
+        await loadDashboard();
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Statement upload failed");
     } finally {
       setUploading(false);
+      setUploadProgress(null);
       event.target.value = "";
     }
+  };
+
+  /**
+   * Polls the statement until it leaves PROCESSING. The interval is deliberately unhurried:
+   * extraction spends most of its time waiting out provider rate limits, so polling faster
+   * would only add requests without learning anything sooner.
+   */
+  const pollUntilSettled = async (statementId: number): Promise<BankStatementResponse> => {
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const statement = await apiGet<BankStatementResponse>(`/api/statements/${statementId}`, token);
+      if (statement.status !== "PROCESSING") {
+        return statement;
+      }
+      setUploadProgress(
+        statement.totalChunks
+          ? `Extracting... part ${statement.processedChunks ?? 0} of ${statement.totalChunks}`
+          : "Reading statement..."
+      );
+    }
+    throw new ApiError(504, "Statement is taking longer than expected - check back shortly");
   };
 
   const handleReceiptFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -134,7 +171,7 @@ export function Dashboard() {
 
       <section className="upload-section">
         <label className="upload-button">
-          {uploading ? "Uploading..." : "Upload bank statement (PDF)"}
+          {uploading ? uploadProgress ?? "Uploading..." : "Upload bank statement (PDF)"}
           <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
         </label>
         <label className="upload-button">
@@ -186,11 +223,6 @@ export function Dashboard() {
               </ResponsiveContainer>
             </div>
           )}
-
-          <div className="chart-card chart-card--wide">
-            <h2>Spend map</h2>
-            <SpendMap locations={summary.locations} />
-          </div>
         </section>
       )}
 
