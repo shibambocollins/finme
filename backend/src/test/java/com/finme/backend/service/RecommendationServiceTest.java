@@ -3,6 +3,7 @@ package com.finme.backend.service;
 import com.finme.backend.ai.AiProvider;
 import com.finme.backend.ai.AiProviderException;
 import com.finme.backend.ai.AllAiProvidersFailedException;
+import com.finme.backend.ai.StubAiProvider;
 import com.finme.backend.dto.RecommendationsResponse;
 import com.finme.backend.entity.PaymentMethod;
 import com.finme.backend.entity.SourceType;
@@ -32,12 +33,7 @@ class RecommendationServiceTest {
 
     /** Records what the model was asked, so tests can assert on it rather than assume. */
     private AiProvider recordingProvider(List<String> reply) {
-        return new AiProvider() {
-            @Override
-            public List<com.finme.backend.ai.ExtractedTransaction> structureTransactions(String redactedText) {
-                throw new AssertionError("recommendations must never trigger extraction");
-            }
-
+        return new StubAiProvider() {
             @Override
             public List<String> recommend(String spendFactsSummary) {
                 recommendCalls.incrementAndGet();
@@ -48,12 +44,7 @@ class RecommendationServiceTest {
     }
 
     private AiProvider failingProvider() {
-        return new AiProvider() {
-            @Override
-            public List<com.finme.backend.ai.ExtractedTransaction> structureTransactions(String redactedText) {
-                throw new AssertionError("not used");
-            }
-
+        return new StubAiProvider() {
             @Override
             public List<String> recommend(String spendFactsSummary) {
                 throw new AllAiProvidersFailedException(new AiProviderException("all down"));

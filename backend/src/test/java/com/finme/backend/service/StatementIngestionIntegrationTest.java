@@ -65,7 +65,7 @@ class StatementIngestionIntegrationTest {
         }
     }
 
-    static class CapturingAiProvider implements AiProvider {
+    static class CapturingAiProvider extends com.finme.backend.ai.StubAiProvider {
         private final AtomicReference<String> lastInput = new AtomicReference<>();
 
         @Override
@@ -73,11 +73,6 @@ class StatementIngestionIntegrationTest {
             lastInput.set(redactedText);
             return List.of(new ExtractedTransaction(
                     LocalDate.now(), "Woolworths", new BigDecimal("450.00"), "Groceries", "test"));
-        }
-
-        @Override
-        public List<String> recommend(String spendFactsSummary) {
-            throw new UnsupportedOperationException("this test exercises extraction only");
         }
 
         String lastInput() {
