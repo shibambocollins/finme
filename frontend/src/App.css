@@ -240,3 +240,53 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* Credit account entry (FR-2.1.2). Wraps rather than scrolls: these are four short fields and
+   a select, and on a narrow screen stacking them beats a horizontal scrollbar. */
+.credit-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.credit-form input,
+.credit-form select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.credit-form input[type="text"] {
+  flex: 1 1 220px;
+}
+
+.credit-form input[type="number"] {
+  flex: 0 1 150px;
+}
+
+.credit-form button {
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.page-header a {
+  margin-right: 16px;
+}
+
+/* FR-2.3.3 requires this to be clearly visible, so it is given a border and full opacity
+   rather than the muted styling used for secondary notes elsewhere. It qualifies advice about
+   someone's money; it is not fine print. */
+.credit-disclaimer {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #e0a33b;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}

@@ -111,6 +111,14 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
         return AiExtractionSupport.parseTransactions(content);
     }
 
+    @Override
+    public List<String> recommendCredit(String creditFactsSummary) {
+        String content = chatCompletion(
+                AiExtractionSupport.buildCreditAnalysisPrompt(creditFactsSummary),
+                RECOMMENDATION_COMPLETION_TOKENS);
+        return AiExtractionSupport.parseRecommendations(content);
+    }
+
     /** One chat-completion round trip: build, send with rate-limit retry, unwrap the content. */
     private String chatCompletion(String prompt, int maxTokens) {
         Map<String, Object> requestBody = new LinkedHashMap<>();

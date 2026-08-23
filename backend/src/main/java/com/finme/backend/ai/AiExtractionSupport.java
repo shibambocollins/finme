@@ -187,6 +187,36 @@ final class AiExtractionSupport {
      * quote only what it was given makes any invented number an obvious defect rather than an
      * indistinguishable one.
      */
+    /**
+     * Asks for a prioritised credit improvement plan over already-calculated figures
+     * (FR-2.3.1).
+     * <p>
+     * Two constraints matter more here than in the spend equivalent. The model must not compute
+     * - utilization comes from CreditUtilization and is the whole basis of the advice. And it
+     * must not promise a score outcome: nobody can guarantee what a bureau will do, so a
+     * sentence like "this will raise your score by 40 points" would be a fabrication the app
+     * appears to stand behind. The user-facing disclaimer (FR-2.3.3) is a constant added by
+     * CreditAnalysisService rather than requested here, so no model output can weaken, reword
+     * or omit it.
+     */
+    static String buildCreditAnalysisPrompt(String creditFactsSummary) {
+        return "You are a credit coach. Below is a user's credit position, already calculated. "
+                + "Write 3 short, prioritised, actionable steps to improve it.\n"
+                + "Rules:\n"
+                + "- Do NOT calculate, estimate, or infer any number. Quote only figures that "
+                + "appear verbatim in the summary below.\n"
+                + "- Do NOT promise or predict a credit score increase, a number of points, or a "
+                + "timeframe. No one can guarantee how a bureau will respond.\n"
+                + "- Order the steps by the \"lower overall utilization by\" figure, largest "
+                + "first. That figure, not how close an account is to its own limit, is what "
+                + "\"highest impact\" means here.\n"
+                + "- One sentence each, plain language, addressed to the user as \"you\".\n"
+                + "- No greetings, no preamble, no markdown.\n"
+                + "Respond with ONLY a JSON object of this exact shape:\n"
+                + "{\"recommendations\": [\"string\", \"string\", \"string\"]}\n\n"
+                + "Credit position:\n" + creditFactsSummary;
+    }
+
     static String buildRecommendationPrompt(String spendFactsSummary) {
         return "You are a personal finance assistant. Below is a summary of one user's "
                 + "spending, already calculated. Write 3 short, specific, actionable "

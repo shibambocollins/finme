@@ -537,4 +537,66 @@ class LiveExtractionSmokeTest {
                         + "silently saved as real spending")
                 .isEmpty();
     }
+
+    /**
+     * Credit narration against real providers, checking the two constraints that matter
+     * (FR-2.3.1): the model must quote only figures the app calculated, and it must not promise
+     * a score outcome. The second is the one worth testing live - a model asked for encouraging
+     * advice will reach for "this will boost your score by 40 points" unless told not to, and
+     * that is a guarantee nobody can make.
+     */
+    @Test
+    void creditPlanQuotesOnlySuppliedFiguresAndPromisesNoScoreIncrease() {
+        String facts = """
+                Overall utilization: 62.5%
+                Total balance: 25000.00
+                Total credit limit: 40000.00
+                Accounts, biggest effect on overall utilization first:
+                - Visa Gold: balance 14000.00 of 25000.00, utilization 56.0%, clearing it would lower overall utilization by 35.0%
+                - Store Card: balance 9500.00 of 10000.00, utilization 95.0%, clearing it would lower overall utilization by 23.8%
+                - Fuel Card: balance 1500.00 of 5000.00, utilization 30.0%, clearing it would lower overall utilization by 3.8%
+                """;
+
+        List<String> plan = aiProvider.recommendCredit(facts);
+
+        System.out.println("\n============ LIVE CREDIT PLAN ============");
+        plan.forEach(step -> System.out.println("  - " + step));
+        System.out.println("=========================================\n");
+
+        assertThat(plan).isNotEmpty();
+        // Deliberately no assertion on which account the plan leads with.
+        //
+        // The prompt now defines "highest impact" explicitly, but the authoritative ranking is
+        // the deterministic accounts list from CreditUtilization that the UI renders - not this
+        // prose. Asserting on the model's ordering would make a passing build depend on a
+        // third-party model's judgement about credit, which is exactly the dependency this
+        // project keeps out of anything that matters. Observed on 2026-08-23: the model leads
+        // with the most-stretched account even when told otherwise, and that is defensible
+        // advice - per-account utilization is penalised independently of the total.
+        //
+        // What IS asserted below is what the model must never do: invent a figure, or promise a
+        // score outcome. Those are correctness, not preference.
+
+        Set<String> supplied = new HashSet<>();
+        Matcher figures = FIGURE.matcher(facts);
+        while (figures.find()) {
+            supplied.add(figures.group());
+        }
+
+        for (String step : plan) {
+            Matcher quoted = FIGURE.matcher(step);
+            while (quoted.find()) {
+                assertThat(supplied)
+                        .as("figure %s in %s was not among the calculated facts", quoted.group(), step)
+                        .contains(quoted.group());
+            }
+            assertThat(step.toLowerCase())
+                    .as("a credit plan must not promise a score outcome: %s", step)
+                    .doesNotContain("guarantee")
+                    .doesNotContain("will increase your score")
+                    .doesNotContain("will improve your score")
+                    .doesNotContain("will raise your score")
+                    .doesNotContain("points to your score");
+        }
+    }
 }

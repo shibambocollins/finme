@@ -41,6 +41,11 @@ public class FallbackAiProviderChain implements AiProvider {
         return tryEachInTurn(provider -> provider.parseManualEntry(naturalLanguage, today));
     }
 
+    @Override
+    public List<String> recommendCredit(String creditFactsSummary) {
+        return tryEachInTurn(provider -> provider.recommendCredit(creditFactsSummary));
+    }
+
     private <T> T tryEachInTurn(Function<AiProvider, T> call) {
         AiProviderException lastFailure = null;
         for (AiProvider provider : providers) {

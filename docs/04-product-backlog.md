@@ -117,3 +117,10 @@ Goal: the credit module becomes genuinely useful, not just a data store.
   can plan before making a payment.
 - As a user, I want to compare my current credit snapshot to a previous one, so that I can
   see my progress over time.
+
+Built 2026-08-23. FR-2.2.2's ranking is by each account's contribution to *overall* utilization
+(balance / total limit), not by how close an account is to its own limit - the two disagree
+often, and the wording of the requirement is explicit about which it means. Both figures are
+reported per account, since an account near its own limit matters independently. The FR-2.3.3
+disclaimer is a server-side constant, never model output, so it cannot be reworded or omitted
+by a bad generation.

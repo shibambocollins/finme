@@ -3,9 +3,14 @@ package com.finme.backend.controller;
 import com.finme.backend.dto.CreateCreditProfileRequest;
 import com.finme.backend.dto.CreditAccountRequest;
 import com.finme.backend.dto.CreditProfileResponse;
+import com.finme.backend.dto.CreditAnalysisResponse;
 import com.finme.backend.dto.RecordCreditScoreRequest;
+import com.finme.backend.dto.ScoreComparisonResponse;
+import com.finme.backend.dto.UtilizationSimulationRequest;
+import com.finme.backend.dto.UtilizationSimulationResponse;
 import com.finme.backend.entity.CreditSnapshot;
 import com.finme.backend.security.AuthenticatedUser;
+import com.finme.backend.service.CreditAnalysisService;
 import com.finme.backend.service.CreditProfileService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -34,10 +40,14 @@ import java.util.List;
 public class CreditController {
 
     private final CreditProfileService creditProfileService;
+    private final CreditAnalysisService creditAnalysisService;
     private final AuthenticatedUser authenticatedUser;
 
-    public CreditController(CreditProfileService creditProfileService, AuthenticatedUser authenticatedUser) {
+    public CreditController(CreditProfileService creditProfileService,
+                            CreditAnalysisService creditAnalysisService,
+                            AuthenticatedUser authenticatedUser) {
         this.creditProfileService = creditProfileService;
+        this.creditAnalysisService = creditAnalysisService;
         this.authenticatedUser = authenticatedUser;
     }
 
@@ -92,5 +102,26 @@ public class CreditController {
     @GetMapping("/score/history")
     public List<CreditSnapshot> scoreHistory() {
         return creditProfileService.scoreHistory(authenticatedUser.currentUserId());
+    }
+
+    /** Calculated utilization plus a prioritised plan and the mandatory disclaimer. */
+    @GetMapping("/analysis")
+    public CreditAnalysisResponse analysis() {
+        return creditAnalysisService.analyse(authenticatedUser.currentUserId());
+    }
+
+    /**
+     * A what-if (FR-2.3.2). POST rather than GET because it carries a body, but it writes
+     * nothing - the stored balance is untouched.
+     */
+    @PostMapping("/simulate")
+    public UtilizationSimulationResponse simulate(@Valid @RequestBody UtilizationSimulationRequest request) {
+        return creditAnalysisService.simulate(authenticatedUser.currentUserId(), request);
+    }
+
+    /** Current score against an earlier reading; defaults to the one immediately before it. */
+    @GetMapping("/score/comparison")
+    public ScoreComparisonResponse scoreComparison(@RequestParam(required = false) Long againstSnapshotId) {
+        return creditAnalysisService.compareScores(authenticatedUser.currentUserId(), againstSnapshotId);
     }
 }
