@@ -277,3 +277,16 @@
 .page-header a {
   margin-right: 16px;
 }
+
+/* FR-2.3.3 requires this to be clearly visible, so it is given a border and full opacity
+   rather than the muted styling used for secondary notes elsewhere. It qualifies advice about
+   someone's money; it is not fine print. */
+.credit-disclaimer {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-left: 3px solid #e0a33b;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+}
