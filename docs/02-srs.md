@@ -66,8 +66,6 @@ testable "shall" statements, grouped by module.
 
 - FR-1.7.1 — The system shall display total spend, category breakdown, and time-based trend
   charts.
-- FR-1.7.2 — The system shall display a map-based visualization of spend by location where
-  location data is available.
 - FR-1.7.3 — The system shall display a recent-activity feed of the latest transactions.
 - FR-1.7.4 — The system shall display AI-generated spend recommendations alongside the
   dashboard.
@@ -156,3 +154,7 @@ testable "shall" statements, grouped by module.
 
 Restated from the proposal for completeness: Business Finance module, family/shared account
 access, automated bank account integration (Open Banking), multi-currency support.
+
+Map-based spend visualization (formerly FR-1.7.2) was descoped on 2026-08-22 after being
+implemented. See `01-project-proposal.md`, Out of Scope (v1), for the reasoning. The remaining
+FR-1.7.x numbering is left unchanged so earlier references stay resolvable.

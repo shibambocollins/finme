@@ -11,7 +11,7 @@ informed financial decisions.
 
 - Automate transaction extraction from bank statement PDFs and photographed receipts/invoices,
   with accuracy measured against a labeled benchmark rather than assumed
-- Provide accurate spend categorization and visualization (category breakdown, trends, map,
+- Provide accurate spend categorization and visualization (category breakdown, trends,
   recent activity)
 - Support ad-hoc cash-transaction logging via natural-language prompt
 - Deliver periodic (weekly) automated spend analysis and improvement suggestions
@@ -59,8 +59,8 @@ risked the same scope-growth pattern this proposal is written to avoid.
 - Duplicate transaction detection between receipt-sourced and statement-sourced transactions
   for card payments only (cash transactions are never matched, since they have no statement
   counterpart); bank statement is authoritative when a match is found
-- Spend dashboard: map-based visualization, category and time-trend charts, financial health
-  summary, AI-generated recommendations, recent activity
+- Spend dashboard: category and time-trend charts, financial health summary, AI-generated
+  recommendations, recent activity
 - Weekly automated spend analysis and improvement suggestions, delivered by scheduled email
 - Evaluation harness measuring extraction precision/recall, category accuracy, and
   hallucination rate, scored separately for the PDF pipeline and the photo pipeline
@@ -85,6 +85,13 @@ risked the same scope-growth pattern this proposal is written to avoid.
 - Family or shared account access — single-user-per-account only
 - Automated bank account integration (Open Banking / direct API pull) — manual upload only
 - Multi-currency support — ZAR only
+- Map-based spend visualization — **descoped 2026-08-22, after being built and then removed.**
+  It worked, but not well enough to be worth its cost. A geocoding API resolves addresses, not
+  businesses, and a card statement line carries at most a suburb — so a chain's branch cannot be
+  identified from statement data, and pins were only ever suburb-accurate. Against that ceiling
+  the feature still cost two external dependencies (OpenCage, Mapbox), two API keys and quotas,
+  and one geocoding call per transaction during ingestion. Removed rather than carried, to keep
+  effort on the evaluation harness, which is this project's actual differentiator.
 
 ## 5. Constraints
 

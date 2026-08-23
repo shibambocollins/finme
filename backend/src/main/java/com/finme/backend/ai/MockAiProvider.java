@@ -22,6 +22,26 @@ import java.util.List;
 public class MockAiProvider implements AiProvider {
 
     @Override
+    public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, java.time.LocalDate today) {
+        if (naturalLanguage == null || naturalLanguage.isBlank()) {
+            return List.of();
+        }
+        return List.of(new ExtractedTransaction(
+                today, "Mock Cash Purchase", new BigDecimal("50.00"),
+                "Other", naturalLanguage, "CASH", "DEBIT"));
+    }
+
+    @Override
+    public List<String> recommend(String spendFactsSummary) {
+        if (spendFactsSummary == null || spendFactsSummary.isBlank()) {
+            return List.of();
+        }
+        return List.of(
+                "Mock recommendation: your largest category grew this month - review it first.",
+                "Mock recommendation: set a target for next month and track against it.");
+    }
+
+    @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
         if (redactedText == null || redactedText.isBlank()) {
             return List.of();
@@ -29,7 +49,7 @@ public class MockAiProvider implements AiProvider {
         return List.of(
                 new ExtractedTransaction(
                         LocalDate.now().minusDays(3), "Woolworths", new BigDecimal("450.00"),
-                        "Groceries", "Mock-extracted transaction", null, null, "Cape Town"),
+                        "Groceries", "Mock-extracted transaction"),
                 new ExtractedTransaction(
                         LocalDate.now().minusDays(1), "Uber", new BigDecimal("85.50"),
                         "Transport", "Mock-extracted transaction")

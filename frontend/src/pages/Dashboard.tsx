@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import {
   Bar,
   BarChart,
@@ -11,8 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAuth } from "../auth/AuthContext";
-import { apiGet, apiPostForm, ApiError } from "../api/client";
-import { SpendMap, type SpendLocation } from "../components/SpendMap";
+import { apiGet, apiPostForm, apiPostJson, ApiError } from "../api/client";
 
 interface Transaction {
   id: number;
@@ -35,7 +34,12 @@ interface Transaction {
 interface BankStatementResponse {
   id: number;
   uploadDate: string;
-  status: string;
+  status: "PROCESSING" | "COMPLETE" | "FAILED";
+  /** Chunk progress while PROCESSING - null until extraction has started. */
+  totalChunks: number | null;
+  processedChunks: number | null;
+  /** Populated only when status is FAILED. */
+  failureReason: string | null;
 }
 
 interface ReceiptResponse {
@@ -48,7 +52,12 @@ interface DashboardSummary {
   totalSpend: number;
   categoryBreakdown: { category: string; amount: number }[];
   trend: { month: string; amount: number }[];
-  locations: SpendLocation[];
+}
+
+interface RecommendationsResponse {
+  recommendations: string[];
+  /** Non-null when the list is empty and there is a reason worth showing the user. */
+  unavailableReason: string | null;
 }
 
 const ACCENT = "#aa3bff";
@@ -57,9 +66,13 @@ export function Dashboard() {
   const { token, email, logout } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [insights, setInsights] = useState<RecommendationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [manualText, setManualText] = useState("");
+  const [loggingManual, setLoggingManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadDashboard = useCallback(async () => {
@@ -76,6 +89,15 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
+
+    // Fetched after the dashboard has already rendered, and never awaited alongside it: this
+    // one may call rate-limited third-party providers, and the totals and charts are correct
+    // whether or not the commentary on them arrives.
+    try {
+      setInsights(await apiGet<RecommendationsResponse>("/api/dashboard/recommendations", token));
+    } catch {
+      setInsights({ recommendations: [], unavailableReason: "Recommendations could not be loaded." });
+    }
   }, [token]);
 
   useEffect(() => {
@@ -88,17 +110,69 @@ export function Dashboard() {
 
     setError(null);
     setUploading(true);
+    setUploadProgress("Uploading...");
     try {
       const form = new FormData();
       form.append("file", file);
-      await apiPostForm<BankStatementResponse>("/api/statements", form, token);
-      await loadDashboard();
+      // The server answers 202 as soon as it has stored the file - the transactions do not
+      // exist yet. Extraction is paced by AI provider rate limits and can take minutes on a
+      // large statement, so progress is polled rather than awaited in the request.
+      const accepted = await apiPostForm<BankStatementResponse>("/api/statements", form, token);
+      const settled = await pollUntilSettled(accepted.id);
+
+      if (settled.status === "FAILED") {
+        setError(settled.failureReason ?? "Statement processing failed");
+      } else {
+        await loadDashboard();
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Statement upload failed");
     } finally {
       setUploading(false);
+      setUploadProgress(null);
       event.target.value = "";
     }
+  };
+
+  const handleManualEntry = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!manualText.trim()) return;
+
+    setError(null);
+    setLoggingManual(true);
+    try {
+      await apiPostJson<Transaction[]>("/api/transactions/manual", { text: manualText.trim() }, token);
+      // Cleared only after the call succeeds - on failure the user keeps what they typed and
+      // can adjust it, rather than having to retype the whole description.
+      setManualText("");
+      await loadDashboard();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not log that entry");
+    } finally {
+      setLoggingManual(false);
+    }
+  };
+
+  /**
+   * Polls the statement until it leaves PROCESSING. The interval is deliberately unhurried:
+   * extraction spends most of its time waiting out provider rate limits, so polling faster
+   * would only add requests without learning anything sooner.
+   */
+  const pollUntilSettled = async (statementId: number): Promise<BankStatementResponse> => {
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const statement = await apiGet<BankStatementResponse>(`/api/statements/${statementId}`, token);
+      if (statement.status !== "PROCESSING") {
+        return statement;
+      }
+      setUploadProgress(
+        statement.totalChunks
+          ? `Extracting... part ${statement.processedChunks ?? 0} of ${statement.totalChunks}`
+          : "Reading statement..."
+      );
+    }
+    throw new ApiError(504, "Statement is taking longer than expected - check back shortly");
   };
 
   const handleReceiptFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -134,7 +208,7 @@ export function Dashboard() {
 
       <section className="upload-section">
         <label className="upload-button">
-          {uploading ? "Uploading..." : "Upload bank statement (PDF)"}
+          {uploading ? uploadProgress ?? "Uploading..." : "Upload bank statement (PDF)"}
           <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
         </label>
         <label className="upload-button">
@@ -147,6 +221,19 @@ export function Dashboard() {
             hidden
           />
         </label>
+        <form className="manual-entry" onSubmit={handleManualEntry}>
+          <input
+            type="text"
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder="Or type a cash purchase: lunch R150 cash today"
+            maxLength={500}
+            disabled={loggingManual}
+          />
+          <button type="submit" disabled={loggingManual || !manualText.trim()}>
+            {loggingManual ? "Logging..." : "Log"}
+          </button>
+        </form>
         {error && <p className="form-error">{error}</p>}
       </section>
 
@@ -156,6 +243,21 @@ export function Dashboard() {
             <span className="stat-label">Total spend</span>
             <span className="stat-value">R{summary.totalSpend.toFixed(2)}</span>
           </div>
+
+          {insights && (insights.recommendations.length > 0 || insights.unavailableReason) && (
+            <div className="chart-card chart-card--wide">
+              <h2>Recommendations</h2>
+              {insights.recommendations.length > 0 ? (
+                <ul className="recommendation-list">
+                  {insights.recommendations.map((recommendation, index) => (
+                    <li key={index}>{recommendation}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="recommendation-empty">{insights.unavailableReason}</p>
+              )}
+            </div>
+          )}
 
           {summary.categoryBreakdown.length > 0 && (
             <div className="chart-card">
@@ -186,11 +288,6 @@ export function Dashboard() {
               </ResponsiveContainer>
             </div>
           )}
-
-          <div className="chart-card chart-card--wide">
-            <h2>Spend map</h2>
-            <SpendMap locations={summary.locations} />
-          </div>
         </section>
       )}
 

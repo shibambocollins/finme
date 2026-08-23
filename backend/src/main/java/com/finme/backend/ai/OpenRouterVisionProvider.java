@@ -12,11 +12,6 @@ public class OpenRouterVisionProvider extends AbstractOpenAiCompatibleVisionProv
     private static final String BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
 
     public OpenRouterVisionProvider(RestClient restClient, String apiKey, String model) {
-        super(restClient, BASE_URL, apiKey, model);
-    }
-
-    @Override
-    protected String providerName() {
-        return "OpenRouter Vision";
+        super(restClient, BASE_URL, apiKey, model, "OpenRouter Vision");
     }
 }

@@ -52,15 +52,15 @@ deliberately at implementation time, not guessed at here).
   FinMe — for blast-radius isolation, per-project usage visibility, and independent
   revocation. Costs nothing extra: quota is scoped per-account, not per-key, on Groq,
   OpenRouter, and Cloudflare.
-- **Geocoding provider:** OpenCage (2,500 req/day free, no card required). Chosen over Google
-  Geocoding to avoid tying a personal-use portfolio project to Google billing and ToS caching
-  restrictions — the free tier ceiling is well above solo-user receipt volume.
-- **Map visualization library:** Mapbox GL JS (50k map loads/month free). Chosen over Leaflet
-  for nicer default vector-tile styling in a portfolio piece where visual polish matters;
-  requires a client-side token restricted by domain (standard practice, not a secret leak).
 
 ## Explicitly excluded
 
+- **OpenCage (geocoding) and Mapbox GL JS (maps)** — both were adopted, integrated, and then
+  removed on 2026-08-22 along with the map feature itself. Neither choice was wrong on its own
+  terms; the feature they served could not reach useful accuracy from statement data. Recorded
+  here so the decision is not re-made from scratch: if map visualization ever returns, a
+  geocoding API is the wrong tool — resolving a merchant to a real storefront needs a Places/POI
+  API (Google Places, Mapbox Search Box, Foursquare), which is a different cost and ToS profile.
 - **Supabase** — considered and rejected. The specific claim raised during planning (that
   Supabase sells user data) was checked and not supported by available evidence — Supabase
   holds SOC 2 Type 2, ISO 27001, and HIPAA compliance. Excluded on preference regardless,

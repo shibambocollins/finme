@@ -17,7 +17,7 @@ public class GroqProvider extends AbstractOpenAiCompatibleProvider {
     private final String model;
 
     public GroqProvider(RestClient restClient, String apiKey, String model) {
-        super(restClient, BASE_URL, apiKey, model);
+        super(restClient, BASE_URL, apiKey, model, "Groq");
         this.model = model;
     }
 
@@ -39,10 +39,5 @@ public class GroqProvider extends AbstractOpenAiCompatibleProvider {
         return model != null && model.contains("gpt-oss")
                 ? Map.of("reasoning_effort", "low")
                 : Map.of();
-    }
-
-    @Override
-    protected String providerName() {
-        return "Groq";
     }
 }

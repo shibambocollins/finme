@@ -8,6 +8,9 @@ import com.finme.backend.entity.Receipt;
 import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
+import com.finme.backend.entity.BankStatement;
+import com.finme.backend.entity.StatementStatus;
+import com.finme.backend.repository.BankStatementRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +35,27 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest(properties = "ai.provider=test-capturing")
 class ReceiptDuplicateDetectionIntegrationTest {
+
+    @Autowired
+    private BankStatementRepository bankStatementRepository;
+
+    /**
+     * Statement extraction runs on a background thread now, so duplicate detection - which
+     * happens as each extracted transaction is saved - has not necessarily run when ingest()
+     * returns. Without this wait these assertions raced the extraction and saw the receipt
+     * transaction still ACTIVE.
+     */
+    private BankStatement awaitSettled(Long statementId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 30_000;
+        while (System.currentTimeMillis() < deadline) {
+            BankStatement statement = bankStatementRepository.findById(statementId).orElseThrow();
+            if (statement.getStatus() != StatementStatus.PROCESSING) {
+                return statement;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("Statement " + statementId + " was still PROCESSING after 30s");
+    }
 
     @Autowired
     private ReceiptIngestionService receiptIngestionService;
@@ -61,7 +85,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
         }
     }
 
-    static class ScriptedAiProvider implements AiProvider {
+    static class ScriptedAiProvider extends com.finme.backend.ai.StubAiProvider {
         private final AtomicReference<List<ExtractedTransaction>> next = new AtomicReference<>(List.of());
 
         void willReturn(ExtractedTransaction transaction) {
@@ -114,7 +138,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
 
         scriptedAiProvider.willReturn(new ExtractedTransaction(
                 receiptDate.plusDays(1), "Woolworths", new BigDecimal("450.00"), "Groceries", "statement"));
-        statementIngestionService.ingest(userId, pdfFile());
+        awaitSettled(statementIngestionService.ingest(userId, pdfFile()).getId());
 
         Transaction reloadedReceiptTransaction =
                 transactionRepository.findById(receiptTransaction.getId()).orElseThrow();
@@ -141,7 +165,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
 
         scriptedAiProvider.willReturn(new ExtractedTransaction(
                 receiptDate, "Corner Cafe", new BigDecimal("65.00"), "Dining", "statement"));
-        statementIngestionService.ingest(userId, pdfFile());
+        awaitSettled(statementIngestionService.ingest(userId, pdfFile()).getId());
 
         Transaction reloadedReceiptTransaction =
                 transactionRepository.findById(receiptTransaction.getId()).orElseThrow();

@@ -172,34 +172,6 @@
   font-size: 15px;
 }
 
-.spend-map {
-  width: 100%;
-  height: 320px;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.spend-map-legend {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 10px 0 0;
-  font-size: 12px;
-  color: var(--text);
-}
-
-.legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-left: 12px;
-}
-
-.legend-dot:first-child {
-  margin-left: 0;
-}
-
 .transaction-table th,
 .transaction-table td {
   text-align: left;
@@ -219,4 +191,52 @@
    table because the amount column alone cannot convey it (both are positive numbers). */
 .amount-credit {
   color: #3ba55d;
+}
+
+/* AI-generated recommendations (FR-1.7.4). Narration of figures computed in code - never a
+   place to render a number the backend did not calculate. */
+.recommendation-list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.recommendation-list li {
+  margin-bottom: 6px;
+}
+
+.recommendation-empty {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 14px;
+}
+
+/* Natural-language cash entry (FR-1.5.1) - the third way transactions get in, alongside
+   statement and receipt upload, for spending that leaves no other record. */
+.manual-entry {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.manual-entry input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.manual-entry button {
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.manual-entry button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

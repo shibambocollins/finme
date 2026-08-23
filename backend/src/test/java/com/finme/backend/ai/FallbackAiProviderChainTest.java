@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,12 +16,32 @@ class FallbackAiProviderChainTest {
     private static final ExtractedTransaction SAMPLE = new ExtractedTransaction(
             LocalDate.now(), "Test Merchant", new BigDecimal("10.00"), "Other", "test");
 
+    /** Stubs the extraction half; every other capability fails loudly via StubAiProvider. */
+    private static AiProvider extractsWith(Function<String, List<ExtractedTransaction>> behaviour) {
+        return new StubAiProvider() {
+            @Override
+            public List<ExtractedTransaction> structureTransactions(String redactedText) {
+                return behaviour.apply(redactedText);
+            }
+        };
+    }
+
+    /** Stubs the narration half, the same way. */
+    private static AiProvider recommendsWith(Function<String, List<String>> behaviour) {
+        return new StubAiProvider() {
+            @Override
+            public List<String> recommend(String spendFactsSummary) {
+                return behaviour.apply(spendFactsSummary);
+            }
+        };
+    }
+
     @Test
     void returnsFirstProviderResultWhenItSucceeds() {
-        AiProvider succeeding = redactedText -> List.of(SAMPLE);
-        AiProvider neverCalled = redactedText -> {
+        AiProvider succeeding = extractsWith(redactedText -> List.of(SAMPLE));
+        AiProvider neverCalled = extractsWith(redactedText -> {
             throw new AssertionError("should not have been called");
-        };
+        });
 
         FallbackAiProviderChain chain = new FallbackAiProviderChain(List.of(succeeding, neverCalled));
 
@@ -29,10 +50,10 @@ class FallbackAiProviderChainTest {
 
     @Test
     void fallsBackToNextProviderWhenFirstFails() {
-        AiProvider failing = redactedText -> {
+        AiProvider failing = extractsWith(redactedText -> {
             throw new AiProviderException("boom");
-        };
-        AiProvider succeeding = redactedText -> List.of(SAMPLE);
+        });
+        AiProvider succeeding = extractsWith(redactedText -> List.of(SAMPLE));
 
         FallbackAiProviderChain chain = new FallbackAiProviderChain(List.of(failing, succeeding));
 
@@ -46,18 +67,18 @@ class FallbackAiProviderChainTest {
         int[] secondCalledAt = new int[1];
         int[] thirdCalledAt = new int[1];
 
-        AiProvider first = redactedText -> {
+        AiProvider first = extractsWith(redactedText -> {
             firstCalledAt[0] = callOrder.incrementAndGet();
             throw new AiProviderException("first failed");
-        };
-        AiProvider second = redactedText -> {
+        });
+        AiProvider second = extractsWith(redactedText -> {
             secondCalledAt[0] = callOrder.incrementAndGet();
             throw new AiProviderException("second failed");
-        };
-        AiProvider third = redactedText -> {
+        });
+        AiProvider third = extractsWith(redactedText -> {
             thirdCalledAt[0] = callOrder.incrementAndGet();
             return List.of(SAMPLE);
-        };
+        });
 
         FallbackAiProviderChain chain = new FallbackAiProviderChain(List.of(first, second, third));
 
@@ -69,12 +90,12 @@ class FallbackAiProviderChainTest {
 
     @Test
     void throwsAllFailedExceptionWhenEveryProviderFails() {
-        AiProvider failingA = redactedText -> {
+        AiProvider failingA = extractsWith(redactedText -> {
             throw new AiProviderException("A failed");
-        };
-        AiProvider failingB = redactedText -> {
+        });
+        AiProvider failingB = extractsWith(redactedText -> {
             throw new AiProviderException("B failed");
-        };
+        });
 
         FallbackAiProviderChain chain = new FallbackAiProviderChain(List.of(failingA, failingB));
 
@@ -82,6 +103,33 @@ class FallbackAiProviderChainTest {
                 .isInstanceOf(AllAiProvidersFailedException.class)
                 .hasCauseInstanceOf(AiProviderException.class)
                 .cause().hasMessageContaining("B failed");
+    }
+
+    @Test
+    void recommendationsFallBackThroughTheChainToo() {
+        AiProvider failing = recommendsWith(summary -> {
+            throw new AiProviderException("recommend failed");
+        });
+        AiProvider succeeding = recommendsWith(summary -> List.of("Spend less on takeaways."));
+
+        FallbackAiProviderChain chain = new FallbackAiProviderChain(List.of(failing, succeeding));
+
+        assertThat(chain.recommend("facts")).containsExactly("Spend less on takeaways.");
+    }
+
+    @Test
+    void throwsAllFailedExceptionWhenEveryProviderFailsToRecommend() {
+        AiProvider failingA = recommendsWith(summary -> {
+            throw new AiProviderException("A failed");
+        });
+        AiProvider failingB = recommendsWith(summary -> {
+            throw new AiProviderException("B failed");
+        });
+
+        FallbackAiProviderChain chain = new FallbackAiProviderChain(List.of(failingA, failingB));
+
+        assertThatThrownBy(() -> chain.recommend("facts"))
+                .isInstanceOf(AllAiProvidersFailedException.class);
     }
 
     @Test

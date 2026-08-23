@@ -1,8 +1,8 @@
 package com.finme.backend.ai;
 
-import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,30 +15,65 @@ import java.util.Map;
 abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
 
     /**
-     * Without an explicit cap the provider applies its own default, which on Groq is 2048 -
-     * and that default silently destroyed extractions. Verified live against Groq
-     * (openai/gpt-oss-20b, 2026-08-21) on a 16-transaction statement: the model spent 1947 of
-     * its 2048 completion tokens on internal reasoning, emitted a *syntactically valid* JSON
-     * object containing only the first transaction, and returned finish_reason "length". The
-     * old code parsed that happily - no exception, no fallback - so a 16-transaction statement
-     * became 1. 8000 leaves room for roughly 90-100 transactions after reasoning overhead; the
-     * finish_reason guard below catches anything past that instead of trusting a short answer.
+     * The output budget is sized to the input rather than fixed, and this is a correctness
+     * concern in both directions.
+     * <p>
+     * Too small and extraction is silently truncated: measured live on 2026-08-21, Groq's own
+     * 2048 default let gpt-oss-20b spend 1947 tokens reasoning and emit a *syntactically
+     * valid* JSON object holding 1 of 16 transactions, which the old code parsed happily.
+     * <p>
+     * Too large and the request is refused before it starts: Groq's free tier limits tokens
+     * per minute to 8000 and counts prompt tokens <b>plus the requested max_tokens</b> against
+     * it, so a flat 8000 meant every call asked for 8797 and was rejected with HTTP 413 -
+     * whatever the statement's actual size. Reserved headroom is not free; it is spent from
+     * the rate limit whether the model needs it or not.
+     * <p>
+     * So: estimate what this specific text needs, and cap it low enough to leave room for the
+     * prompt. Anything that still overruns is caught by the finish_reason guard rather than
+     * being trusted.
      */
-    private static final int MAX_COMPLETION_TOKENS = 8000;
+    private static final int TOKENS_PER_EXTRACTED_ROW = 130;
+    private static final int FIXED_OUTPUT_OVERHEAD = 700;
+    private static final int MIN_COMPLETION_TOKENS = 1200;
+    private static final int MAX_COMPLETION_TOKENS = 5000;
 
-    private final RestClient restClient;
-    private final String baseUrl;
-    private final String apiKey;
-    private final String model;
+    /** Enough for a few short sentences plus reasoning overhead - see recommend(). */
+    private static final int RECOMMENDATION_COMPLETION_TOKENS = 1500;
 
-    protected AbstractOpenAiCompatibleProvider(RestClient restClient, String baseUrl, String apiKey, String model) {
-        this.restClient = restClient;
-        this.baseUrl = baseUrl;
-        this.apiKey = apiKey;
-        this.model = model;
+    /** A manual entry describes one purchase, occasionally a handful. */
+    private static final int MANUAL_ENTRY_COMPLETION_TOKENS = 1500;
+
+    /**
+     * Rough but deliberately generous row count - every non-blank line is treated as a
+     * potential transaction, so headers and footers only ever inflate the estimate. Estimating
+     * high is the safe direction here: the cost is rate-limit headroom, while estimating low
+     * costs extracted transactions.
+     */
+    static int estimateCompletionTokens(String text) {
+        long rows = text == null ? 0 : text.lines().filter(line -> !line.isBlank()).count();
+        long estimate = FIXED_OUTPUT_OVERHEAD + rows * TOKENS_PER_EXTRACTED_ROW;
+        return (int) Math.clamp(estimate, MIN_COMPLETION_TOKENS, MAX_COMPLETION_TOKENS);
     }
 
-    protected abstract String providerName();
+    private final ProviderHttp http;
+    private final String baseUrl;
+    private final String model;
+    private final String providerName;
+
+    /**
+     * The provider name is passed in rather than obtained from an abstract method. An earlier
+     * shape called providerName() from this constructor to build the HTTP helper - which works
+     * only because every subclass happens to return a string literal. A subclass that returned
+     * a field would have seen null, because its own fields are not assigned until after the
+     * superclass constructor completes. Name is data; treating it as data removes the trap.
+     */
+    protected AbstractOpenAiCompatibleProvider(
+            RestClient restClient, String baseUrl, String apiKey, String model, String providerName) {
+        this.http = new ProviderHttp(restClient, apiKey, providerName);
+        this.baseUrl = baseUrl;
+        this.model = model;
+        this.providerName = providerName;
+    }
 
     /**
      * Provider-specific request fields merged into the body. Empty by default; GroqProvider
@@ -50,29 +85,43 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
 
     @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
+        String content = chatCompletion(
+                AiExtractionSupport.buildStatementPrompt(redactedText),
+                estimateCompletionTokens(redactedText));
+        return AiExtractionSupport.parseTransactions(content);
+    }
+
+    @Override
+    public List<String> recommend(String spendFactsSummary) {
+        // A fixed, modest budget: the answer is a handful of one-sentence strings regardless of
+        // how much spending the summary describes, and on a per-minute token budget an
+        // over-generous reservation is spent whether or not it is used.
+        String content = chatCompletion(
+                AiExtractionSupport.buildRecommendationPrompt(spendFactsSummary),
+                RECOMMENDATION_COMPLETION_TOKENS);
+        return AiExtractionSupport.parseRecommendations(content);
+    }
+
+    @Override
+    public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today) {
+        // One sentence in, at most a few transactions out - a small fixed budget is plenty.
+        String content = chatCompletion(
+                AiExtractionSupport.buildManualEntryPrompt(naturalLanguage, today),
+                MANUAL_ENTRY_COMPLETION_TOKENS);
+        return AiExtractionSupport.parseTransactions(content);
+    }
+
+    /** One chat-completion round trip: build, send with rate-limit retry, unwrap the content. */
+    private String chatCompletion(String prompt, int maxTokens) {
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", model);
-        requestBody.put("messages", List.of(
-                Map.of("role", "user", "content", AiExtractionSupport.buildStatementPrompt(redactedText))));
+        requestBody.put("messages", List.of(Map.of("role", "user", "content", prompt)));
         requestBody.put("response_format", Map.of("type", "json_object"));
         requestBody.put("temperature", 0.1);
-        requestBody.put("max_tokens", MAX_COMPLETION_TOKENS);
+        requestBody.put("max_tokens", maxTokens);
         requestBody.putAll(extraRequestFields());
 
-        String responseBody;
-        try {
-            responseBody = restClient.post()
-                    .uri(baseUrl)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(String.class);
-        } catch (Exception ex) {
-            throw new AiProviderException(providerName() + " request failed", ex);
-        }
-
-        String content = AiExtractionSupport.extractOpenAiMessageContent(responseBody, providerName());
-        return AiExtractionSupport.parseTransactions(content);
+        String responseBody = http.post(baseUrl, requestBody);
+        return AiExtractionSupport.extractOpenAiMessageContent(responseBody, providerName);
     }
 }

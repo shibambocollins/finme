@@ -33,6 +33,88 @@ pipeline that is right 95% of the time versus 70% of the time is the difference 
 tool someone can trust and one that quietly misleads them. The number needs to be known, not
 assumed.
 
+**Implementation (built 2026-08-23).** `ExtractionEvaluationHarnessTest`, run on demand:
+
+```bash
+cd backend
+./mvnw test -Dtest=ExtractionEvaluationHarnessTest -Dlive.ai=true
+```
+
+Gated behind `-Dlive.ai=true` because it spends real API quota; a normal `./mvnw test` skips
+it. The report prints and is written to `target/extraction-evaluation.txt` so runs can be
+compared over time.
+
+- A reported transaction matches a labeled one on **date and amount**. Merchant text is
+  excluded from matching — models paraphrase it, and scoring on string equality would report a
+  naming difference as both a miss and an invention.
+- Pairing is one-to-one, so a transaction reported twice scores one match and one invention.
+  This is what catches duplicate-inflation bugs, which otherwise look like perfect recall.
+- Category accuracy is scored over matched transactions only, so a detection failure is
+  counted once (against recall) rather than twice.
+- A document the chain cannot process at all counts as a total miss, never as a skip —
+  dropping the hardest cases would quietly raise the average.
+- The harness's own arithmetic is unit-tested in `ExtractionEvaluatorTest`. A harness whose
+  scoring is itself unverified would report confident numbers about accuracy while being wrong,
+  which is the exact habit it exists to break.
+
+Real labeled documents live in `backend/src/test/resources/golden/` and are gitignored — they
+contain real financial data. When that directory is empty the harness falls back to a generated
+synthetic set and labels the report `SYNTHETIC`. Synthetic documents are clean (no scan skew,
+no column drift, no faded thermal print), so those scores are a **floor on difficulty, not a
+sample of it**. See that directory's README for the label format.
+
+**First measured run (2026-08-23, synthetic set, Groq primary):**
+
+| | PDF (statements) | Photo (receipts) |
+|---|---|---|
+| documents | 4 | 3 |
+| precision | 1.000 | 1.000 |
+| recall | 1.000 | 1.000 |
+| F1 | 1.000 | 1.000 |
+| category accuracy | 0.851 | 1.000 |
+| hallucination rate | 0.000 | 0.000 |
+
+Detection is not the weak point on clean input; **categorisation is**. The failures were
+systematic rather than random — Woolworths and Checkers read as "Shopping" instead of
+"Groceries", Shell as "Utilities" instead of "Transport" — the signature of undefined category
+boundaries rather than a weak model.
+
+**Second run (same day), after replacing the bare category list with definitions:**
+
+| | before | after |
+|---|---|---|
+| category accuracy (PDF) | 0.851 | **0.957** |
+| precision / recall / hallucination | 1.000 / 1.000 / 0.000 | unchanged |
+
+The definitions were written as principles ("the merchant's primary business decides"), not as
+a list of the merchants that failed. Naming those would have raised this score while teaching
+the model nothing about the next statement — improving the measurement instead of the thing
+measured.
+
+The two remaining errors needed *merchant knowledge* rather than clearer boundaries — Nandos
+read as Shopping, a Gautrain card recharge as Other.
+
+**Third run, after naming the major South African merchants in the prompt:**
+
+| | bare list | + definitions | + merchant names |
+|---|---|---|---|
+| category accuracy (PDF) | 0.851 | 0.957 | **1.000** |
+| precision / recall / F1 | 1.000 | 1.000 | 1.000 |
+| hallucination rate | 0.000 | 0.000 | 0.000 |
+
+The definitions and the merchant list fix different failures and both are needed: definitions
+draw the category boundaries, the merchant list supplies the knowledge to place a merchant
+inside them. A model can understand perfectly that restaurants are Dining and still not know
+that "NANDOS" is a restaurant. The list is drawn from the major national chains — the app is
+ZAR-only and single-country by design, so that universe is small, stable and knowable — and
+ends with a rule sending unlisted merchants back to the definitions.
+
+**Read 1.000 with care.** Several of the named merchants appear in the golden set, so category
+accuracy is no longer fully independent of the prompt for those merchants, and the set is 47
+transactions of clean synthetic text. This measures that the pipeline handles well-formed input
+correctly; it does not establish real-world accuracy. The figure that will mean something is the
+one produced once labeled **real** statements sit in `backend/src/test/resources/golden/`.
+
 ## 3. Security & Privacy Testing
 
 - Unit test asserting the Redaction Service strips known account-number and ID-number

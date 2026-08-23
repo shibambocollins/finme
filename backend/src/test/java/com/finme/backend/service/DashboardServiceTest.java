@@ -44,11 +44,6 @@ class DashboardServiceTest {
         return t;
     }
 
-    private static Transaction located(Transaction t, double lat, double lng) {
-        t.setLatitude(lat);
-        t.setLongitude(lng);
-        return t;
-    }
 
     @Test
     void queriesOnlyActiveTransactionsForTheGivenUser() {
@@ -139,43 +134,6 @@ class DashboardServiceTest {
     }
 
     @Test
-    void includesOnlyTransactionsThatWereActuallyGeocoded() {
-        Transaction geocoded = transaction(LocalDate.of(2026, 1, 5), "Woolworths", "120.00", "Groceries");
-        geocoded.setLatitude(-26.1076);
-        geocoded.setLongitude(28.0567);
-        Transaction ungeocoded = transaction(LocalDate.of(2026, 1, 6), "Corner Cafe", "65.00", "Dining");
-
-        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
-                .thenReturn(List.of(geocoded, ungeocoded));
-
-        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
-
-        assertThat(summary.locations()).hasSize(1);
-        var location = summary.locations().get(0);
-        assertThat(location.merchant()).isEqualTo("Woolworths");
-        assertThat(location.amount()).isEqualByComparingTo("120.00");
-        assertThat(location.latitude()).isEqualTo(-26.1076);
-        assertThat(location.longitude()).isEqualTo(28.0567);
-        assertThat(location.approximate()).isFalse();
-    }
-
-    @Test
-    void flagsApproximateLocationsSeparatelyFromExactOnes() {
-        Transaction approximate = transaction(LocalDate.of(2026, 1, 5), "KFC", "75.00", "Dining");
-        approximate.setLatitude(-33.9249);
-        approximate.setLongitude(18.4241);
-        approximate.setLocationApproximate(true);
-
-        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
-                .thenReturn(List.of(approximate));
-
-        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
-
-        assertThat(summary.locations()).hasSize(1);
-        assertThat(summary.locations().get(0).approximate()).isTrue();
-    }
-
-    @Test
     void incomeIsExcludedFromTotalSpendEntirely() {
         when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
                 .thenReturn(List.of(
@@ -228,22 +186,6 @@ class DashboardServiceTest {
         assertThat(summary.trend().get(0).month()).isEqualTo("2026-07");
         assertThat(summary.trend().get(0).amount()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(summary.trend().get(1).amount()).isEqualByComparingTo(new BigDecimal("87.50"));
-    }
-
-    @Test
-    void moneyInNeverAppearsOnTheSpendMap() {
-        when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
-                .thenReturn(List.of(
-                        located(transaction(LocalDate.of(2026, 7, 2), "Woolworths", "842.15", "Groceries"), -26.1, 28.0),
-                        located(credit(LocalDate.of(2026, 7, 15), "Refund Woolworths", "842.15", "Groceries"), -26.1, 28.0),
-                        located(credit(LocalDate.of(2026, 7, 1), "Salary", "18500.00", "Income"), -26.1, 28.0)
-                ));
-
-        DashboardSummaryResponse summary = dashboardService.getSummary(1L);
-
-        assertThat(summary.locations())
-                .singleElement()
-                .satisfies(l -> assertThat(l.merchant()).isEqualTo("Woolworths"));
     }
 
     @Test
