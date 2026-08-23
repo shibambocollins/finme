@@ -24,7 +24,48 @@ interface CreditProfile {
   accounts: CreditAccount[];
 }
 
+interface AccountUtilization {
+  accountId: number;
+  accountName: string;
+  balance: number;
+  creditLimit: number;
+  /** Ratio against this account's own limit - 0.95 is 95%. */
+  utilization: number | null;
+  /** How far overall utilization would fall if this account were cleared. The ranking key. */
+  overallReduction: number | null;
+}
+
+interface CreditAnalysis {
+  overallUtilization: number | null;
+  totalBalance: number;
+  totalLimit: number;
+  accounts: AccountUtilization[];
+  plan: string[];
+  planUnavailableReason: string | null;
+  /** FR-2.3.3 - server-supplied constant, never model output. Always rendered. */
+  disclaimer: string;
+}
+
+interface Simulation {
+  currentOverall: number;
+  simulatedOverall: number;
+  change: number;
+  note: string;
+}
+
+interface ScoreComparison {
+  currentScore: number | null;
+  previousScore: number | null;
+  previousRecordedAt: string | null;
+  change: number | null;
+  daysApart: number | null;
+  message: string;
+}
+
 const PAYMENT_STATUSES: PaymentStatus[] = ["ON_TIME", "LATE", "DEFAULTED", "UNKNOWN"];
+
+const percent = (ratio: number | null) =>
+  ratio === null ? "n/a" : `${(ratio * 100).toFixed(1)}%`;
 
 const EMPTY_ACCOUNT = { accountName: "", balance: "", creditLimit: "", paymentStatus: "UNKNOWN" as PaymentStatus };
 
@@ -38,12 +79,25 @@ export function Credit() {
   const [accountForm, setAccountForm] = useState(EMPTY_ACCOUNT);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [scoreInput, setScoreInput] = useState("");
+  const [analysis, setAnalysis] = useState<CreditAnalysis | null>(null);
+  const [comparison, setComparison] = useState<ScoreComparison | null>(null);
+  const [simAccountId, setSimAccountId] = useState("");
+  const [simBalance, setSimBalance] = useState("");
+  const [simulation, setSimulation] = useState<Simulation | null>(null);
 
   const loadProfile = useCallback(async () => {
     setLoading(true);
     try {
       setProfile(await apiGet<CreditProfile>("/api/credit/profile", token));
       setError(null);
+      // Fetched after the profile, and never allowed to fail the page: the analysis calls an
+      // AI provider for its plan, while the profile above is plain stored data.
+      const [analysisData, comparisonData] = await Promise.all([
+        apiGet<CreditAnalysis>("/api/credit/analysis", token).catch(() => null),
+        apiGet<ScoreComparison>("/api/credit/score/comparison", token).catch(() => null),
+      ]);
+      setAnalysis(analysisData);
+      setComparison(comparisonData);
     } catch (err) {
       // 404 is the ordinary state for a user who has not opted in - the credit module is
       // optional, so "no profile" is a starting point to offer, not a failure to report.
@@ -62,7 +116,15 @@ export function Credit() {
     void loadProfile();
   }, [loadProfile]);
 
-  /** Every mutation returns the whole profile, so the view is replaced rather than patched. */
+  /**
+   * Every mutation returns the whole profile, so the view is replaced rather than patched.
+   * <p>
+   * The derived views are refetched too, and that is not optional: adding an account or
+   * recording a score changes the calculated utilization and the score comparison, and those
+   * come from different endpoints. Updating only the profile would leave "Where you stand"
+   * showing figures from before the change - stale numbers that look current, which is worse
+   * than showing nothing.
+   */
   const run = async (action: () => Promise<CreditProfile | void>) => {
     setBusy(true);
     setError(null);
@@ -70,7 +132,16 @@ export function Credit() {
       const updated = await action();
       if (updated) {
         setProfile(updated);
-      } else {
+      }
+      // A simulation was run against balances that may no longer be current.
+      setSimulation(null);
+      const [analysisData, comparisonData] = await Promise.all([
+        apiGet<CreditAnalysis>("/api/credit/analysis", token).catch(() => null),
+        apiGet<ScoreComparison>("/api/credit/score/comparison", token).catch(() => null),
+      ]);
+      setAnalysis(analysisData);
+      setComparison(comparisonData);
+      if (!updated) {
         await loadProfile();
       }
     } catch (err) {
@@ -118,6 +189,22 @@ export function Credit() {
 
   const removeAccount = (id: number) =>
     run(() => apiDelete<CreditProfile>(`/api/credit/accounts/${id}`, token));
+
+  const submitSimulation = (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    apiPostJson<Simulation>(
+      "/api/credit/simulate",
+      { accountId: Number(simAccountId), newBalance: simBalance },
+      token
+    )
+      .then(setSimulation)
+      .catch((err) =>
+        setError(err instanceof ApiError ? err.message : "Could not run that simulation")
+      )
+      .finally(() => setBusy(false));
+  };
 
   const submitScore = (event: FormEvent) => {
     event.preventDefault();
@@ -248,6 +335,114 @@ export function Credit() {
               )}
             </form>
           </section>
+
+          {analysis && (
+            <section className="chart-card chart-card--wide">
+              <h2>Where you stand</h2>
+              <p className="stat-value">
+                {analysis.overallUtilization === null
+                  ? "Add an account to see your utilization"
+                  : `${percent(analysis.overallUtilization)} overall utilization`}
+              </p>
+              {analysis.overallUtilization !== null && (
+                <p className="recommendation-empty">
+                  R{analysis.totalBalance.toFixed(2)} of R{analysis.totalLimit.toFixed(2)} in use
+                </p>
+              )}
+
+              {analysis.accounts.length > 0 && (
+                <table className="transaction-table">
+                  <thead>
+                    <tr>
+                      <th>Account</th>
+                      <th>Its own utilization</th>
+                      <th>Clearing it lowers overall by</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.accounts.map((a) => (
+                      <tr key={a.accountId}>
+                        <td>{a.accountName}</td>
+                        <td>{percent(a.utilization)}</td>
+                        <td>{percent(a.overallReduction)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <h3>What to do first</h3>
+              {analysis.plan.length > 0 ? (
+                <ol className="recommendation-list">
+                  {analysis.plan.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="recommendation-empty">{analysis.planUnavailableReason}</p>
+              )}
+
+              {/* FR-2.3.3 - rendered whenever an analysis is shown, plan or no plan. */}
+              <p className="credit-disclaimer">{analysis.disclaimer}</p>
+            </section>
+          )}
+
+          {analysis && analysis.accounts.length > 0 && (
+            <section className="chart-card chart-card--wide">
+              <h2>What if you paid one down?</h2>
+              <form className="credit-form" onSubmit={submitSimulation}>
+                <select
+                  value={simAccountId}
+                  onChange={(e) => setSimAccountId(e.target.value)}
+                  required
+                  disabled={busy}
+                >
+                  <option value="">Choose an account</option>
+                  {analysis.accounts.map((a) => (
+                    <option key={a.accountId} value={a.accountId}>
+                      {a.accountName}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={simBalance}
+                  onChange={(e) => setSimBalance(e.target.value)}
+                  placeholder="New balance"
+                  required
+                  disabled={busy}
+                />
+                <button type="submit" disabled={busy || !simAccountId || !simBalance}>
+                  Simulate
+                </button>
+              </form>
+              {simulation && (
+                <>
+                  <p>
+                    {percent(simulation.currentOverall)} &rarr;{" "}
+                    <strong>{percent(simulation.simulatedOverall)}</strong>{" "}
+                    ({simulation.change <= 0 ? "" : "+"}
+                    {(simulation.change * 100).toFixed(1)} points of utilization)
+                  </p>
+                  <p className="recommendation-empty">{simulation.note}</p>
+                </>
+              )}
+            </section>
+          )}
+
+          {comparison && comparison.previousScore !== null && (
+            <section className="chart-card chart-card--wide">
+              <h2>Progress</h2>
+              <p className="stat-value">{comparison.message}</p>
+              <p className="recommendation-empty">
+                {comparison.previousScore} on{" "}
+                {new Date(comparison.previousRecordedAt as string).toLocaleDateString()} &rarr;{" "}
+                {comparison.currentScore} now
+              </p>
+            </section>
+          )}
 
           <section>
             <h2>Your credit accounts</h2>
