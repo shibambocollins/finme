@@ -11,6 +11,8 @@ import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionDirection;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.exception.StatementNotFoundException;
+import com.finme.backend.exception.UnrecognisedDocumentException;
+import com.finme.backend.exception.InvalidStatementFileException;
 import com.finme.backend.exception.StatementProcessingException;
 import com.finme.backend.repository.BankStatementRepository;
 import com.finme.backend.repository.TransactionRepository;
@@ -84,6 +86,14 @@ public class StatementIngestionService {
             throw new StatementProcessingException(null, ex);
         }
 
+        // Checked before a statement row is created, so a file that was never a PDF does not
+        // leave a FAILED record behind. The controller's content-type check is a client-supplied
+        // header; this is the bytes.
+        if (!FileSignature.isPdf(pdfBytes)) {
+            throw new InvalidStatementFileException(
+                    "That file is not a PDF. Export your statement as a PDF and upload that.");
+        }
+
         BankStatement statement = new BankStatement();
         statement.setUserId(userId);
         statement = bankStatementRepository.save(statement);
@@ -107,6 +117,16 @@ public class StatementIngestionService {
             String rawText = pdfExtractionService.extractText(new ByteArrayInputStream(pdfBytes));
             String redactedText = redactionService.redact(rawText);
 
+            // A PDF with no extractable text is almost always a scan or photo saved as a PDF.
+            // Without this it produces zero chunks, zero AI calls and a COMPLETE statement with
+            // nothing in it - the app reporting success for work it never did.
+            if (redactedText.isBlank()) {
+                throw new UnrecognisedDocumentException(
+                        "No readable text in that PDF. It looks like a scan or an image - "
+                                + "download the PDF version from your banking app rather than "
+                                + "scanning a printout.");
+            }
+
             // One call per chunk, not one call for the statement. A real statement exceeds what
             // a single free-tier call can take in and give back - see StatementTextChunker for
             // the measured limits. Results are concatenated in order, so the transaction list
@@ -126,6 +146,16 @@ public class StatementIngestionService {
             log.info("Statement {}: extracted {} transactions from {} chunk(s)",
                     statementId, extracted.size(), chunks.size());
 
+            // The prompt asks the model to return an empty list when it finds no transactions,
+            // and it does so for a payslip, an invoice, or any other PDF that is not a statement.
+            // Treating that as success left the user with a COMPLETE upload, an unchanged
+            // dashboard, and nothing anywhere explaining why.
+            if (extracted.isEmpty()) {
+                throw new UnrecognisedDocumentException(
+                        "No transactions found in that document. It does not look like a bank "
+                                + "statement - check you uploaded the right file.");
+            }
+
             for (ExtractedTransaction et : extracted) {
                 Transaction transaction = transactionRepository.save(toTransaction(userId, statementId, et));
                 duplicateDetectionService.checkForDuplicate(transaction);
@@ -134,6 +164,13 @@ public class StatementIngestionService {
             statement.setStatus(StatementStatus.COMPLETE);
             statement.setFailureReason(null);
             return bankStatementRepository.save(statement);
+        } catch (UnrecognisedDocumentException ex) {
+            // Recorded like any other failure so the polling client sees it, but propagated
+            // unwrapped: this is a 422 the user can act on, not a 500.
+            statement.setStatus(StatementStatus.FAILED);
+            statement.setFailureReason(ex.getMessage());
+            bankStatementRepository.save(statement);
+            throw ex;
         } catch (IOException | AllAiProvidersFailedException ex) {
             statement.setStatus(StatementStatus.FAILED);
             // Persist why. Until this existed, a failed upload was a status with no explanation,
