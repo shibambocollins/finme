@@ -74,10 +74,27 @@ sample of it**. See that directory's README for the label format.
 | category accuracy | 0.851 | 1.000 |
 | hallucination rate | 0.000 | 0.000 |
 
-Detection is not the weak point on clean input; **categorisation is**. The failures are
+Detection is not the weak point on clean input; **categorisation is**. The failures were
 systematic rather than random — Woolworths and Checkers read as "Shopping" instead of
-"Groceries", Shell as "Utilities" instead of "Transport" — which suggests the fix is category
-definitions in the prompt, not a better model.
+"Groceries", Shell as "Utilities" instead of "Transport" — the signature of undefined category
+boundaries rather than a weak model.
+
+**Second run (same day), after replacing the bare category list with definitions:**
+
+| | before | after |
+|---|---|---|
+| category accuracy (PDF) | 0.851 | **0.957** |
+| precision / recall / hallucination | 1.000 / 1.000 / 0.000 | unchanged |
+
+The definitions were written as principles ("the merchant's primary business decides"), not as
+a list of the merchants that failed. Naming those would have raised this score while teaching
+the model nothing about the next statement — improving the measurement instead of the thing
+measured.
+
+The two remaining errors need *merchant knowledge* rather than clearer boundaries (Nandos read
+as Shopping; a Gautrain card recharge as Other), so prompt work stops here. Note also that 47
+transactions is a thin sample: a 10-point move is roughly five transactions. Treat it as a
+direction, not a precise figure, until real labeled documents are in the golden set.
 
 ## 3. Security & Privacy Testing
 

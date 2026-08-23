@@ -21,6 +21,42 @@ final class AiExtractionSupport {
     private AiExtractionSupport() {
     }
 
+    /**
+     * Category definitions shared by both prompts.
+     * <p>
+     * The bare list these replace ("Categories should be one of: ...") left every boundary to
+     * the model's guess, and the evaluation harness showed the cost: category accuracy 0.851 on
+     * the PDF pipeline while detection scored a clean 1.000. The errors were systematic, not
+     * random - supermarkets read as "Shopping", fuel stations as "Utilities", bank fees as
+     * "Utilities" - which is the signature of undefined boundaries rather than a weak model.
+     * <p>
+     * These are deliberately written as <em>principles</em> ("the merchant's primary business
+     * decides"), not as a list of merchant names. Naming the specific merchants that failed
+     * would raise the score on this golden set while teaching the model nothing about the next
+     * statement - the classic way to make an evaluation number improve without improving the
+     * thing it measures.
+     */
+    private static final String CATEGORY_GUIDE =
+            "Assign exactly one category from this list, using these definitions:\n"
+                    + "- Groceries: supermarkets and food shops. A supermarket stays Groceries "
+                    + "even when it also sells clothing or homeware.\n"
+                    + "- Dining: restaurants, takeaways, fast food, cafes, bars.\n"
+                    + "- Transport: fuel and petrol stations, ride-hailing, taxis, public "
+                    + "transport, tolls, parking, vehicle servicing. A fuel station is Transport "
+                    + "even though it also sells food.\n"
+                    + "- Utilities: electricity, water, municipal accounts, internet, mobile "
+                    + "airtime and data.\n"
+                    + "- Health: pharmacies, doctors, hospitals, medical aid and health "
+                    + "insurance premiums.\n"
+                    + "- Entertainment: streaming services, cinema, events, games.\n"
+                    + "- Shopping: clothing, electronics, furniture and general retail whose "
+                    + "primary business is not food.\n"
+                    + "- Income: money coming in - salary, deposits, interest received.\n"
+                    + "- Other: bank charges and account fees, transfers, and anything that does "
+                    + "not clearly fit a category above. Bank fees are Other, not Utilities.\n"
+                    + "When a merchant could fit more than one, the merchant's primary business "
+                    + "decides.\n";
+
     static String buildStatementPrompt(String redactedText) {
         return "You are a financial transaction extraction assistant. Given raw bank statement "
                 + "text, extract every distinct transaction you can find. Respond with ONLY a "
@@ -36,9 +72,8 @@ final class AiExtractionSupport {
                 + "column the figure sits under decides this, not the merchant name. A refund "
                 + "keeps the category of whatever was originally bought - a returned grocery "
                 + "item is still \"Groceries\" - and is marked CREDIT.\n"
-                + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
-                + "Dining, Shopping, Health, Income, Other. If no transactions are found, "
-                + "return {\"transactions\": []}.\n\n"
+                + CATEGORY_GUIDE
+                + "If no transactions are found, return {\"transactions\": []}.\n\n"
                 + "Statement text:\n" + redactedText;
     }
 
@@ -60,9 +95,8 @@ final class AiExtractionSupport {
                 + "Report \"amount\" as a POSITIVE number. \"direction\" is \"DEBIT\" for an "
                 + "ordinary purchase receipt; use \"CREDIT\" only when the slip is explicitly a "
                 + "refund, return, or credit note.\n"
-                + "Categories should be one of: Groceries, Transport, Entertainment, Utilities, "
-                + "Dining, Shopping, Health, Income, Other. Use today's date if no date is "
-                + "visible on the receipt. If paymentMethod isn't shown or determinable, use "
+                + CATEGORY_GUIDE
+                + "Use today's date if no date is visible on the receipt. If paymentMethod isn't shown or determinable, use "
                 + "\"UNKNOWN\". If this image is not a receipt, return "
                 + "{\"transactions\": []}.";
     }
