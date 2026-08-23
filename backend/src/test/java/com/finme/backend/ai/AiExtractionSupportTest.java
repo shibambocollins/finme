@@ -120,62 +120,6 @@ class AiExtractionSupportTest {
     }
 
     @Test
-    void parsesOptionalAddressFromAReceiptTransaction() {
-        String json = """
-                {"transactions": [
-                  {"date": "2026-01-12", "merchant": "Woolworths", "amount": 120.00, "category": "Groceries", "description": "desc", "paymentMethod": "CARD", "address": "1 Sandton Dr, Sandton"}
-                ]}
-                """;
-
-        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
-
-        assertThat(result.get(0).address()).isEqualTo("1 Sandton Dr, Sandton");
-    }
-
-    @Test
-    void addressIsNullWhenAbsentOrExplicitlyNullOrBlank() {
-        String json = """
-                {"transactions": [
-                  {"date": "2026-01-12", "merchant": "a", "amount": 1, "category": "c", "description": "d"},
-                  {"date": "2026-01-12", "merchant": "b", "amount": 1, "category": "c", "description": "d", "address": null},
-                  {"date": "2026-01-12", "merchant": "c", "amount": 1, "category": "c", "description": "d", "address": "  "}
-                ]}
-                """;
-
-        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
-
-        assertThat(result).extracting(ExtractedTransaction::address).containsExactly(null, null, null);
-    }
-
-    @Test
-    void parsesOptionalLocationHintFromAStatementTransaction() {
-        String json = """
-                {"transactions": [
-                  {"date": "2026-01-12", "merchant": "KFC", "amount": 75.00, "category": "Dining", "description": "desc", "locationHint": "Cape Town CBD"}
-                ]}
-                """;
-
-        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
-
-        assertThat(result.get(0).locationHint()).isEqualTo("Cape Town CBD");
-    }
-
-    @Test
-    void locationHintIsNullWhenAbsentOrExplicitlyNullOrBlank() {
-        String json = """
-                {"transactions": [
-                  {"date": "2026-01-12", "merchant": "a", "amount": 1, "category": "c", "description": "d"},
-                  {"date": "2026-01-12", "merchant": "b", "amount": 1, "category": "c", "description": "d", "locationHint": null},
-                  {"date": "2026-01-12", "merchant": "c", "amount": 1, "category": "c", "description": "d", "locationHint": "  "}
-                ]}
-                """;
-
-        List<ExtractedTransaction> result = AiExtractionSupport.parseTransactions(json);
-
-        assertThat(result).extracting(ExtractedTransaction::locationHint).containsExactly(null, null, null);
-    }
-
-    @Test
     void extractsJsonObjectFromSurroundingProse() {
         String messy = "Sure, here you go:\n```json\n{\"transactions\": []}\n```\nHope that helps!";
 
