@@ -192,3 +192,21 @@
 .amount-credit {
   color: #3ba55d;
 }
+
+/* AI-generated recommendations (FR-1.7.4). Narration of figures computed in code - never a
+   place to render a number the backend did not calculate. */
+.recommendation-list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.recommendation-list li {
+  margin-bottom: 6px;
+}
+
+.recommendation-empty {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 14px;
+}

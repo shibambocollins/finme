@@ -5,6 +5,9 @@ import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.entity.BankStatement;
+import com.finme.backend.entity.PaymentMethod;
+import com.finme.backend.entity.SourceType;
+import com.finme.backend.entity.TransactionDirection;
 import com.finme.backend.repository.BankStatementRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -21,7 +24,12 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -103,6 +111,12 @@ class LiveExtractionSmokeTest {
 
     @Autowired
     private BankStatementRepository bankStatementRepository;
+
+    @Autowired
+    private SpendAnalysisService spendAnalysisService;
+
+    @Autowired
+    private RecommendationService recommendationService;
 
     @Autowired
     private DashboardService dashboardService;
@@ -281,6 +295,74 @@ class LiveExtractionSmokeTest {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             document.save(out);
             return out.toByteArray();
+        }
+    }
+
+    /**
+     * The one thing that can quietly break FR-2.2.1: a model that helpfully does its own
+     * arithmetic. Every figure in a recommendation must appear verbatim in the facts the
+     * application calculated and supplied - anything else is a number the app cannot stand
+     * behind, however plausible it reads.
+     */
+    @Test
+    void recommendationsQuoteOnlyFiguresTheApplicationCalculated() {
+        long userId = 990003L;
+        seedSpendingFor(userId);
+
+        String facts = spendAnalysisService.factsFor(userId).asPromptText();
+        var response = recommendationService.getRecommendations(userId);
+
+        System.out.println("\n============ LIVE RECOMMENDATIONS ============");
+        System.out.println(facts);
+        response.recommendations().forEach(r -> System.out.println("  - " + r));
+        System.out.println("=============================================\n");
+
+        assertThat(response.unavailableReason()).isNull();
+        assertThat(response.recommendations()).isNotEmpty();
+
+        Set<String> suppliedFigures = new HashSet<>();
+        Matcher supplied = FIGURE.matcher(facts);
+        while (supplied.find()) {
+            suppliedFigures.add(supplied.group());
+        }
+
+        for (String recommendation : response.recommendations()) {
+            Matcher quoted = FIGURE.matcher(recommendation);
+            while (quoted.find()) {
+                assertThat(suppliedFigures)
+                        .as("figure %s in %s was not among the supplied facts", quoted.group(), recommendation)
+                        .contains(quoted.group());
+            }
+        }
+    }
+
+    private static final Pattern FIGURE = Pattern.compile("\\d[\\d.]*");
+
+    /** A small two-month spread, so there is a real month-over-month change to narrate. */
+    private void seedSpendingFor(long userId) {
+        record Row(LocalDate date, String merchant, String amount, String category) {
+        }
+        List<Row> rows = List.of(
+                new Row(LocalDate.of(2026, 6, 4), "Checkers", "1580.10", "Groceries"),
+                new Row(LocalDate.of(2026, 6, 9), "Discovery", "2150.00", "Health"),
+                new Row(LocalDate.of(2026, 6, 18), "Uber", "890.30", "Transport"),
+                new Row(LocalDate.of(2026, 7, 3), "Woolworths", "2234.70", "Groceries"),
+                new Row(LocalDate.of(2026, 7, 11), "Discovery", "2393.75", "Health"),
+                new Row(LocalDate.of(2026, 7, 19), "Uber", "1037.50", "Transport"),
+                new Row(LocalDate.of(2026, 7, 22), "Nandos", "343.90", "Dining"));
+
+        for (Row row : rows) {
+            Transaction transaction = new Transaction();
+            transaction.setUserId(userId);
+            transaction.setSourceType(SourceType.STATEMENT);
+            transaction.setDate(row.date());
+            transaction.setMerchant(row.merchant());
+            transaction.setAmount(new BigDecimal(row.amount()));
+            transaction.setCategory(row.category());
+            transaction.setPaymentMethod(PaymentMethod.CARD);
+            transaction.setDirection(TransactionDirection.DEBIT);
+            transaction.setStatus(TransactionStatus.ACTIVE);
+            transactionRepository.save(transaction);
         }
     }
 }
