@@ -32,4 +32,9 @@ public class StubAiProvider implements AiProvider {
     public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today) {
         throw new AssertionError("parseManualEntry() was not expected in this test");
     }
+
+    @Override
+    public List<String> recommendCredit(String creditFactsSummary) {
+        throw new AssertionError("recommendCredit() was not expected in this test");
+    }
 }
