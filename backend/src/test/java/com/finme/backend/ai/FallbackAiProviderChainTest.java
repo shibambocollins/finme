@@ -16,33 +16,19 @@ class FallbackAiProviderChainTest {
     private static final ExtractedTransaction SAMPLE = new ExtractedTransaction(
             LocalDate.now(), "Test Merchant", new BigDecimal("10.00"), "Other", "test");
 
-    /**
-     * Stubs the extraction half of AiProvider. These were plain lambdas until the interface
-     * gained recommend() and stopped being functional; recommend() fails loudly here so a test
-     * that reaches it by accident says so rather than quietly passing.
-     */
+    /** Stubs the extraction half; every other capability fails loudly via StubAiProvider. */
     private static AiProvider extractsWith(Function<String, List<ExtractedTransaction>> behaviour) {
-        return new AiProvider() {
+        return new StubAiProvider() {
             @Override
             public List<ExtractedTransaction> structureTransactions(String redactedText) {
                 return behaviour.apply(redactedText);
             }
-
-            @Override
-            public List<String> recommend(String spendFactsSummary) {
-                throw new AssertionError("recommend() should not have been called");
-            }
         };
     }
 
-    /** Stubs the narration half, with the same guard in the opposite direction. */
+    /** Stubs the narration half, the same way. */
     private static AiProvider recommendsWith(Function<String, List<String>> behaviour) {
-        return new AiProvider() {
-            @Override
-            public List<ExtractedTransaction> structureTransactions(String redactedText) {
-                throw new AssertionError("structureTransactions() should not have been called");
-            }
-
+        return new StubAiProvider() {
             @Override
             public List<String> recommend(String spendFactsSummary) {
                 return behaviour.apply(spendFactsSummary);
