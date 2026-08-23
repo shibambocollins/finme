@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { Register } from "./pages/Register";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
+import { Credit } from "./pages/Credit";
 import { AuthCallback } from "./pages/AuthCallback";
 import "./App.css";
 
@@ -25,6 +26,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/credit"
+          element={
+            <ProtectedRoute>
+              <Credit />
             </ProtectedRoute>
           }
         />
