@@ -210,3 +210,33 @@
   opacity: 0.7;
   font-size: 14px;
 }
+
+/* Natural-language cash entry (FR-1.5.1) - the third way transactions get in, alongside
+   statement and receipt upload, for spending that leaves no other record. */
+.manual-entry {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.manual-entry input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.manual-entry button {
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.manual-entry button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
