@@ -91,10 +91,29 @@ a list of the merchants that failed. Naming those would have raised this score w
 the model nothing about the next statement — improving the measurement instead of the thing
 measured.
 
-The two remaining errors need *merchant knowledge* rather than clearer boundaries (Nandos read
-as Shopping; a Gautrain card recharge as Other), so prompt work stops here. Note also that 47
-transactions is a thin sample: a 10-point move is roughly five transactions. Treat it as a
-direction, not a precise figure, until real labeled documents are in the golden set.
+The two remaining errors needed *merchant knowledge* rather than clearer boundaries — Nandos
+read as Shopping, a Gautrain card recharge as Other.
+
+**Third run, after naming the major South African merchants in the prompt:**
+
+| | bare list | + definitions | + merchant names |
+|---|---|---|---|
+| category accuracy (PDF) | 0.851 | 0.957 | **1.000** |
+| precision / recall / F1 | 1.000 | 1.000 | 1.000 |
+| hallucination rate | 0.000 | 0.000 | 0.000 |
+
+The definitions and the merchant list fix different failures and both are needed: definitions
+draw the category boundaries, the merchant list supplies the knowledge to place a merchant
+inside them. A model can understand perfectly that restaurants are Dining and still not know
+that "NANDOS" is a restaurant. The list is drawn from the major national chains — the app is
+ZAR-only and single-country by design, so that universe is small, stable and knowable — and
+ends with a rule sending unlisted merchants back to the definitions.
+
+**Read 1.000 with care.** Several of the named merchants appear in the golden set, so category
+accuracy is no longer fully independent of the prompt for those merchants, and the set is 47
+transactions of clean synthetic text. This measures that the pipeline handles well-formed input
+correctly; it does not establish real-world accuracy. The figure that will mean something is the
+one produced once labeled **real** statements sit in `backend/src/test/resources/golden/`.
 
 ## 3. Security & Privacy Testing
 
