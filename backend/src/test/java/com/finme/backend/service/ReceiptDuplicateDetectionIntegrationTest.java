@@ -96,6 +96,11 @@ class ReceiptDuplicateDetectionIntegrationTest {
         public List<ExtractedTransaction> structureTransactions(String redactedText) {
             return next.get();
         }
+
+        @Override
+        public List<String> recommend(String spendFactsSummary) {
+            throw new UnsupportedOperationException("this test exercises extraction only");
+        }
     }
 
     static class ScriptedVisionAiProvider implements VisionAiProvider {

@@ -75,6 +75,11 @@ class StatementIngestionIntegrationTest {
                     LocalDate.now(), "Woolworths", new BigDecimal("450.00"), "Groceries", "test"));
         }
 
+        @Override
+        public List<String> recommend(String spendFactsSummary) {
+            throw new UnsupportedOperationException("this test exercises extraction only");
+        }
+
         String lastInput() {
             return lastInput.get();
         }
