@@ -48,6 +48,12 @@ public class CloudflareProvider implements AiProvider {
         return AiExtractionSupport.parseTransactions(json);
     }
 
+    @Override
+    public List<String> recommendCredit(String creditFactsSummary) {
+        String json = run(AiExtractionSupport.buildCreditAnalysisPrompt(creditFactsSummary));
+        return AiExtractionSupport.parseRecommendations(json);
+    }
+
     /** One Workers AI round trip, returning the balanced JSON object found in the reply. */
     private String run(String prompt) {
         String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model;
