@@ -21,6 +21,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -117,6 +123,9 @@ class LiveExtractionSmokeTest {
 
     @Autowired
     private RecommendationService recommendationService;
+
+    @Autowired
+    private ReceiptIngestionService receiptIngestionService;
 
     @Autowired
     private DashboardService dashboardService;
@@ -364,5 +373,94 @@ class LiveExtractionSmokeTest {
             transaction.setStatus(TransactionStatus.ACTIVE);
             transactionRepository.save(transaction);
         }
+    }
+
+    /**
+     * The receipt pipeline against real vision providers. Until this existed it was the only
+     * path in the app never run outside mocks - every receipt test used a stub, so a provider
+     * returning nothing usable would have gone unnoticed until a user hit it.
+     */
+    @Test
+    void extractsAReceiptViaTheRealVisionChain() throws IOException, InterruptedException {
+        long userId = 990004L;
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "receipt.jpg", "image/jpeg", buildReceiptImage());
+
+        long startedAt = System.currentTimeMillis();
+        var receipt = receiptIngestionService.ingest(userId, file);
+        double elapsed = (System.currentTimeMillis() - startedAt) / 1000.0;
+
+        List<Transaction> saved = transactionRepository
+                .findByUserIdAndStatusOrderByDateDesc(userId, TransactionStatus.ACTIVE);
+
+        System.out.println("\n============ LIVE RECEIPT ============");
+        System.out.printf("status  : %s%n", receipt.getStatus());
+        System.out.printf("elapsed : %.1fs%n", elapsed);
+        saved.forEach(t -> System.out.printf("  %s  %-24s %10s  %-7s %s%n",
+                t.getDate(), truncate(t.getMerchant(), 23), t.getAmount(),
+                t.getDirection(), t.getCategory()));
+        System.out.println("======================================\n");
+
+        assertThat(saved).hasSize(1);
+        Transaction transaction = saved.get(0);
+        assertThat(transaction.getAmount()).isEqualByComparingTo(RECEIPT_TOTAL);
+        assertThat(transaction.getMerchant().toUpperCase()).contains("WOOLWORTHS");
+        assertThat(transaction.getSourceType()).isEqualTo(SourceType.RECEIPT);
+    }
+
+    private static final java.math.BigDecimal RECEIPT_TOTAL = new java.math.BigDecimal("247.85");
+
+    /**
+     * A synthetic till slip, rendered rather than photographed. It is deliberately clean - the
+     * point is to prove the pipeline works end to end against real providers, not to claim
+     * anything about accuracy on a crumpled, badly-lit thermal receipt. Measuring that is the
+     * evaluation harness's job, with real photos.
+     */
+    private static byte[] buildReceiptImage() throws IOException {
+        int width = 620;
+        int height = 780;
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, width, height);
+        g.setColor(Color.BLACK);
+
+        String[] lines = {
+                "        WOOLWORTHS",
+                "      Sandton City Mall",
+                "     VAT No. 4210******",
+                "",
+                "  Date: 14/07/2026   Time: 16:42",
+                "  Till: 04   Cashier: 118",
+                "  ------------------------------",
+                "  Milk 2L Full Cream       34.99",
+                "  Brown Bread              22.50",
+                "  Free Range Eggs 18       89.99",
+                "  Chicken Breasts 1kg      74.90",
+                "  Bananas 1kg              25.47",
+                "  ------------------------------",
+                "  SUBTOTAL                247.85",
+                "  VAT INCLUDED             32.33",
+                "",
+                "  TOTAL                   247.85",
+                "",
+                "  CARD PAYMENT            247.85",
+                "  VISA ****1234  APPROVED",
+                "",
+                "      THANK YOU FOR SHOPPING",
+        };
+
+        int y = 60;
+        for (String line : lines) {
+            g.setFont(new Font(Font.MONOSPACED, line.contains("TOTAL") ? Font.BOLD : Font.PLAIN, 22));
+            g.drawString(line, 30, y);
+            y += 32;
+        }
+        g.dispose();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "jpg", out);
+        return out.toByteArray();
     }
 }
