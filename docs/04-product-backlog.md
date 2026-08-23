@@ -83,6 +83,12 @@ assumed.
   hallucination rate for both the PDF and photo extraction pipelines, so that I know how
   reliable the system actually is.
 
+Both built 2026-08-23. The weekly email is scheduled Monday 07:00 (Africa/Johannesburg),
+configurable via `WEEKLY_ANALYSIS_CRON`, and disabled in the dev profile so a local run never
+mails anyone. It needs `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` in `backend/.env` before it can
+actually send — a Gmail App Password, not an account password. See `05-test-plan.md` for the
+evaluation harness.
+
 ## Iteration 7 — Manual/Cash Entry via Prompt
 
 Goal: transactions that never generate a receipt or statement line can still be logged.
