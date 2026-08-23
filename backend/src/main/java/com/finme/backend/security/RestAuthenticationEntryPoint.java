@@ -27,6 +27,12 @@ import java.time.Instant;
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
+    /**
+     * A plain mapper is enough here now that ErrorResponse carries a pre-formatted String
+     * timestamp rather than an Instant - see GlobalExceptionHandler.ErrorResponse for why that
+     * matters. Injecting Spring's mapper is not an option: this application runs on a Jackson
+     * version that publishes no com.fasterxml.jackson ObjectMapper bean at all.
+     */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
@@ -34,8 +40,8 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
             throws IOException {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        ErrorResponse body = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(), "Authentication required or session expired", Instant.now());
+        ErrorResponse body = ErrorResponse.of(
+                HttpStatus.UNAUTHORIZED.value(), "Authentication required or session expired");
         response.getWriter().write(MAPPER.writeValueAsString(body));
     }
 }
