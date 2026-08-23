@@ -56,3 +56,16 @@ export function apiPostJson<T>(path: string, body: unknown, token?: string | nul
 export function apiPostForm<T>(path: string, form: FormData, token: string | null): Promise<T> {
   return request<T>(path, { method: "POST", token, body: form });
 }
+
+export function apiPut<T>(path: string, body: unknown, token: string | null): Promise<T> {
+  return request<T>(path, {
+    method: "PUT",
+    token,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+export function apiDelete<T>(path: string, token: string | null): Promise<T> {
+  return request<T>(path, { method: "DELETE", token });
+}

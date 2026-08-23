@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet, apiPostForm, apiPostJson, ApiError } from "../api/client";
 
@@ -199,6 +200,7 @@ export function Dashboard() {
       <header className="dashboard-header">
         <h1>FinMe</h1>
         <div>
+          <Link to="/credit">Credit</Link>
           <span>{email}</span>
           <button type="button" onClick={logout}>
             Log out
