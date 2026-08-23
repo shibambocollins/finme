@@ -112,7 +112,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
     }
 
     private static MockMultipartFile jpegFile() {
-        return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", new byte[]{1, 2, 3});
+        return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", TestImages.jpeg());
     }
 
     private static MockMultipartFile pdfFile() throws Exception {
