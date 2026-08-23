@@ -2,6 +2,7 @@ package com.finme.backend.ai;
 
 import org.springframework.web.client.RestClient;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +40,12 @@ public class CloudflareProvider implements AiProvider {
     public List<String> recommend(String spendFactsSummary) {
         String json = run(AiExtractionSupport.buildRecommendationPrompt(spendFactsSummary));
         return AiExtractionSupport.parseRecommendations(json);
+    }
+
+    @Override
+    public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today) {
+        String json = run(AiExtractionSupport.buildManualEntryPrompt(naturalLanguage, today));
+        return AiExtractionSupport.parseTransactions(json);
     }
 
     /** One Workers AI round trip, returning the balanced JSON object found in the reply. */

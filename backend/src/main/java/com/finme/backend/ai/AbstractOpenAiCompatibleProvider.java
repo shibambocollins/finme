@@ -2,6 +2,7 @@ package com.finme.backend.ai;
 
 import org.springframework.web.client.RestClient;
 
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,9 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
 
     /** Enough for a few short sentences plus reasoning overhead - see recommend(). */
     private static final int RECOMMENDATION_COMPLETION_TOKENS = 1500;
+
+    /** A manual entry describes one purchase, occasionally a handful. */
+    private static final int MANUAL_ENTRY_COMPLETION_TOKENS = 1500;
 
     /**
      * Rough but deliberately generous row count - every non-blank line is treated as a
@@ -96,6 +100,15 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
                 AiExtractionSupport.buildRecommendationPrompt(spendFactsSummary),
                 RECOMMENDATION_COMPLETION_TOKENS);
         return AiExtractionSupport.parseRecommendations(content);
+    }
+
+    @Override
+    public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today) {
+        // One sentence in, at most a few transactions out - a small fixed budget is plenty.
+        String content = chatCompletion(
+                AiExtractionSupport.buildManualEntryPrompt(naturalLanguage, today),
+                MANUAL_ENTRY_COMPLETION_TOKENS);
+        return AiExtractionSupport.parseTransactions(content);
     }
 
     /** One chat-completion round trip: build, send with rate-limit retry, unwrap the content. */

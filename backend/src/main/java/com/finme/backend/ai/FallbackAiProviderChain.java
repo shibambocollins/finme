@@ -3,6 +3,7 @@ package com.finme.backend.ai;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.function.Function;
 
@@ -33,6 +34,11 @@ public class FallbackAiProviderChain implements AiProvider {
     @Override
     public List<String> recommend(String spendFactsSummary) {
         return tryEachInTurn(provider -> provider.recommend(spendFactsSummary));
+    }
+
+    @Override
+    public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today) {
+        return tryEachInTurn(provider -> provider.parseManualEntry(naturalLanguage, today));
     }
 
     private <T> T tryEachInTurn(Function<AiProvider, T> call) {
