@@ -68,6 +68,59 @@ final class AiExtractionSupport {
     }
 
     /**
+     * Asks for spend recommendations over figures that have already been calculated (FR-1.7.4).
+     * <p>
+     * The instruction not to compute or estimate anything is the important line. Everything
+     * numeric in the summary was produced by deterministic code (see SpendMath), and FR-2.2.1
+     * requires it stays that way - a model that helpfully works out its own percentage would
+     * put a figure on the dashboard that the application cannot stand behind. Asking it to
+     * quote only what it was given makes any invented number an obvious defect rather than an
+     * indistinguishable one.
+     */
+    static String buildRecommendationPrompt(String spendFactsSummary) {
+        return "You are a personal finance assistant. Below is a summary of one user's "
+                + "spending, already calculated. Write 3 short, specific, actionable "
+                + "recommendations based on it.\n"
+                + "Rules:\n"
+                + "- Do NOT calculate, estimate, or infer any number. Quote only figures that "
+                + "appear verbatim in the summary below.\n"
+                + "- Prioritise the largest changes and the largest categories.\n"
+                + "- One sentence each, plain language, addressed to the user as \"you\".\n"
+                + "- No greetings, no preamble, no markdown.\n"
+                + "Respond with ONLY a JSON object of this exact shape:\n"
+                + "{\"recommendations\": [\"string\", \"string\", \"string\"]}\n\n"
+                + "Spending summary:\n" + spendFactsSummary;
+    }
+
+    /**
+     * Reads the recommendations array, keeping only non-blank strings. A model that returns
+     * fewer than asked, or pads with empty entries, yields a shorter list rather than an error -
+     * an imperfect set of suggestions is still useful, and this is advisory text, not a figure
+     * anyone will act on financially.
+     */
+    static List<String> parseRecommendations(String jsonContent) {
+        JsonNode root;
+        try {
+            root = MAPPER.readTree(jsonContent);
+        } catch (Exception ex) {
+            throw new AiProviderException("Could not parse AI recommendations as JSON", ex);
+        }
+
+        JsonNode recommendations = root.get("recommendations");
+        if (recommendations == null || !recommendations.isArray()) {
+            throw new AiProviderException("AI response JSON had no 'recommendations' array");
+        }
+
+        List<String> result = new ArrayList<>();
+        for (JsonNode node : recommendations) {
+            if (node.isTextual() && !node.asText().isBlank()) {
+                result.add(node.asText().trim());
+            }
+        }
+        return result;
+    }
+
+    /**
      * Pulls choices[0].message.content out of an OpenAI-compatible chat completion response,
      * rejecting a response the model didn't finish.
      * <p>

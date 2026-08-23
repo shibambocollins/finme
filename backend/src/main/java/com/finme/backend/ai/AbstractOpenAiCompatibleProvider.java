@@ -43,6 +43,9 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
     private static final int MIN_COMPLETION_TOKENS = 1200;
     private static final int MAX_COMPLETION_TOKENS = 5000;
 
+    /** Enough for a few short sentences plus reasoning overhead - see recommend(). */
+    private static final int RECOMMENDATION_COMPLETION_TOKENS = 1500;
+
     /**
      * Rough but deliberately generous row count - every non-blank line is treated as a
      * potential transaction, so headers and footers only ever inflate the estimate. Estimating
@@ -159,18 +162,34 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
 
     @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
+        String content = chatCompletion(
+                AiExtractionSupport.buildStatementPrompt(redactedText),
+                estimateCompletionTokens(redactedText));
+        return AiExtractionSupport.parseTransactions(content);
+    }
+
+    @Override
+    public List<String> recommend(String spendFactsSummary) {
+        // A fixed, modest budget: the answer is a handful of one-sentence strings regardless of
+        // how much spending the summary describes, and on a per-minute token budget an
+        // over-generous reservation is spent whether or not it is used.
+        String content = chatCompletion(
+                AiExtractionSupport.buildRecommendationPrompt(spendFactsSummary),
+                RECOMMENDATION_COMPLETION_TOKENS);
+        return AiExtractionSupport.parseRecommendations(content);
+    }
+
+    /** One chat-completion round trip: build, send with rate-limit retry, unwrap the content. */
+    private String chatCompletion(String prompt, int maxTokens) {
         Map<String, Object> requestBody = new LinkedHashMap<>();
         requestBody.put("model", model);
-        requestBody.put("messages", List.of(
-                Map.of("role", "user", "content", AiExtractionSupport.buildStatementPrompt(redactedText))));
+        requestBody.put("messages", List.of(Map.of("role", "user", "content", prompt)));
         requestBody.put("response_format", Map.of("type", "json_object"));
         requestBody.put("temperature", 0.1);
-        requestBody.put("max_tokens", estimateCompletionTokens(redactedText));
+        requestBody.put("max_tokens", maxTokens);
         requestBody.putAll(extraRequestFields());
 
         String responseBody = postWithRateLimitRetry(requestBody);
-
-        String content = AiExtractionSupport.extractOpenAiMessageContent(responseBody, providerName());
-        return AiExtractionSupport.parseTransactions(content);
+        return AiExtractionSupport.extractOpenAiMessageContent(responseBody, providerName());
     }
 }
