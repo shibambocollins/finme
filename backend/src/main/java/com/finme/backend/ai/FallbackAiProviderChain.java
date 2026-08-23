@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * NFR-7: falls back to the next provider on failure rather than surfacing an unhandled error.
@@ -26,10 +27,19 @@ public class FallbackAiProviderChain implements AiProvider {
 
     @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
+        return tryEachInTurn(provider -> provider.structureTransactions(redactedText));
+    }
+
+    @Override
+    public List<String> recommend(String spendFactsSummary) {
+        return tryEachInTurn(provider -> provider.recommend(spendFactsSummary));
+    }
+
+    private <T> T tryEachInTurn(Function<AiProvider, T> call) {
         AiProviderException lastFailure = null;
         for (AiProvider provider : providers) {
             try {
-                return provider.structureTransactions(redactedText);
+                return call.apply(provider);
             } catch (AiProviderException ex) {
                 // Log the root cause, not just ex.getMessage(). A wrapped "Groq request
                 // failed" told us nothing while the real answer - an HTTP 413 naming the

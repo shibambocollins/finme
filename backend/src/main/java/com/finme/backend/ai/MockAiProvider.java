@@ -22,6 +22,16 @@ import java.util.List;
 public class MockAiProvider implements AiProvider {
 
     @Override
+    public List<String> recommend(String spendFactsSummary) {
+        if (spendFactsSummary == null || spendFactsSummary.isBlank()) {
+            return List.of();
+        }
+        return List.of(
+                "Mock recommendation: your largest category grew this month - review it first.",
+                "Mock recommendation: set a target for next month and track against it.");
+    }
+
+    @Override
     public List<ExtractedTransaction> structureTransactions(String redactedText) {
         if (redactedText == null || redactedText.isBlank()) {
             return List.of();
