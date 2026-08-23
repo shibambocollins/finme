@@ -22,6 +22,16 @@ import java.util.List;
 public class MockAiProvider implements AiProvider {
 
     @Override
+    public List<ExtractedTransaction> parseManualEntry(String naturalLanguage, java.time.LocalDate today) {
+        if (naturalLanguage == null || naturalLanguage.isBlank()) {
+            return List.of();
+        }
+        return List.of(new ExtractedTransaction(
+                today, "Mock Cash Purchase", new BigDecimal("50.00"),
+                "Other", naturalLanguage, "CASH", "DEBIT"));
+    }
+
+    @Override
     public List<String> recommend(String spendFactsSummary) {
         if (spendFactsSummary == null || spendFactsSummary.isBlank()) {
             return List.of();
