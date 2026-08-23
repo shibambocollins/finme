@@ -54,12 +54,19 @@ interface DashboardSummary {
   trend: { month: string; amount: number }[];
 }
 
+interface RecommendationsResponse {
+  recommendations: string[];
+  /** Non-null when the list is empty and there is a reason worth showing the user. */
+  unavailableReason: string | null;
+}
+
 const ACCENT = "#aa3bff";
 
 export function Dashboard() {
   const { token, email, logout } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [insights, setInsights] = useState<RecommendationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
@@ -79,6 +86,15 @@ export function Dashboard() {
       setError(err instanceof ApiError ? err.message : "Failed to load dashboard");
     } finally {
       setLoading(false);
+    }
+
+    // Fetched after the dashboard has already rendered, and never awaited alongside it: this
+    // one may call rate-limited third-party providers, and the totals and charts are correct
+    // whether or not the commentary on them arrives.
+    try {
+      setInsights(await apiGet<RecommendationsResponse>("/api/dashboard/recommendations", token));
+    } catch {
+      setInsights({ recommendations: [], unavailableReason: "Recommendations could not be loaded." });
     }
   }, [token]);
 
@@ -193,6 +209,21 @@ export function Dashboard() {
             <span className="stat-label">Total spend</span>
             <span className="stat-value">R{summary.totalSpend.toFixed(2)}</span>
           </div>
+
+          {insights && (insights.recommendations.length > 0 || insights.unavailableReason) && (
+            <div className="chart-card chart-card--wide">
+              <h2>Recommendations</h2>
+              {insights.recommendations.length > 0 ? (
+                <ul className="recommendation-list">
+                  {insights.recommendations.map((recommendation, index) => (
+                    <li key={index}>{recommendation}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="recommendation-empty">{insights.unavailableReason}</p>
+              )}
+            </div>
+          )}
 
           {summary.categoryBreakdown.length > 0 && (
             <div className="chart-card">
