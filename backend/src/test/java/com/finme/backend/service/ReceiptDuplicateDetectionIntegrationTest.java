@@ -85,7 +85,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
         }
     }
 
-    static class ScriptedAiProvider implements AiProvider {
+    static class ScriptedAiProvider extends com.finme.backend.ai.StubAiProvider {
         private final AtomicReference<List<ExtractedTransaction>> next = new AtomicReference<>(List.of());
 
         void willReturn(ExtractedTransaction transaction) {
@@ -95,11 +95,6 @@ class ReceiptDuplicateDetectionIntegrationTest {
         @Override
         public List<ExtractedTransaction> structureTransactions(String redactedText) {
             return next.get();
-        }
-
-        @Override
-        public List<String> recommend(String spendFactsSummary) {
-            throw new UnsupportedOperationException("this test exercises extraction only");
         }
     }
 

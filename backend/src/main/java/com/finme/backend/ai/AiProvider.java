@@ -1,5 +1,6 @@
 package com.finme.backend.ai;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -25,4 +26,14 @@ public interface AiProvider {
      * fallback ordering, and the rate-limit retry behaviour that free tiers make mandatory.
      */
     List<String> recommend(String spendFactsSummary);
+
+    /**
+     * Parses a free-text description of spending into transactions (FR-1.5.1, FR-1.5.2).
+     * <p>
+     * {@code today} is passed in rather than read inside an implementation, so the reference
+     * point for "yesterday" is the application's clock and is identical across the whole
+     * fallback chain - a provider resolving a relative date against its own idea of today would
+     * put the transaction in a different month depending on which provider answered.
+     */
+    List<ExtractedTransaction> parseManualEntry(String naturalLanguage, LocalDate today);
 }
