@@ -8,6 +8,8 @@ import com.finme.backend.service.StatementIngestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -26,6 +28,14 @@ public class StatementController {
         this.authenticatedUser = authenticatedUser;
     }
 
+    /**
+     * Accepts the upload and returns straight away with the statement in PROCESSING; the client
+     * follows {@link #status} until it reaches COMPLETE or FAILED.
+     * <p>
+     * 202 Accepted rather than 201 Created, because when this returns the transactions do not
+     * exist yet - only the intent to extract them does. Extraction of a large statement is paced
+     * by provider rate limits and takes minutes, which is far too long to hold a request open.
+     */
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BankStatementResponse> upload(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -36,6 +46,14 @@ public class StatementController {
         }
 
         BankStatement statement = statementIngestionService.ingest(authenticatedUser.currentUserId(), file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(BankStatementResponse.from(statement));
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(BankStatementResponse.from(statement));
+    }
+
+    /** Poll target for an in-flight upload: carries status, chunk progress, and any failure reason. */
+    @GetMapping("/{id}")
+    public ResponseEntity<BankStatementResponse> status(@PathVariable Long id) {
+        BankStatement statement =
+                statementIngestionService.getForUser(authenticatedUser.currentUserId(), id);
+        return ResponseEntity.ok(BankStatementResponse.from(statement));
     }
 }
