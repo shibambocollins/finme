@@ -503,4 +503,38 @@ class LiveExtractionSmokeTest {
                 e.date(), truncate(e.merchant(), 19), e.amount(),
                 e.direction(), e.paymentMethod(), e.category()));
     }
+
+    /**
+     * The premise the "not a bank statement" message rests on: that a real model, given a
+     * readable PDF that is not a statement, returns no transactions rather than inventing some
+     * to be helpful. If it invented them the app would cheerfully save fiction, and no amount of
+     * downstream validation would catch it - so this is worth verifying against live providers
+     * rather than assuming.
+     */
+    @Test
+    void findsNoTransactionsInADocumentThatIsNotAStatement() {
+        String payslip = """
+                ACME MANUFACTURING (PTY) LTD
+                PAYSLIP - July 2026
+                Employee: C. Ntsobokwane      Employee No: [REDACTED]
+                Basic Salary                      22000.00
+                Housing Allowance                  3500.00
+                PAYE                              -4820.00
+                UIF                                -177.12
+                Net Pay                           20502.88
+                Leave Balance: 12.5 days
+                """;
+
+        var extracted = aiProvider.structureTransactions(payslip);
+
+        System.out.println("\n===== NON-STATEMENT DOCUMENT =====");
+        System.out.println("extracted: " + extracted.size());
+        extracted.forEach(t -> System.out.printf("  %s %s %s%n", t.date(), t.merchant(), t.amount()));
+        System.out.println("==================================\n");
+
+        assertThat(extracted)
+                .as("a payslip is not a bank statement - inventing transactions here would be "
+                        + "silently saved as real spending")
+                .isEmpty();
+    }
 }
