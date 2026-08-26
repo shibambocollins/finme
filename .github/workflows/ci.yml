@@ -1,0 +1,96 @@
+name: CI
+
+# Runs on pushes to any branch and on pull requests into main. Branch work is where things
+# break, so waiting until a PR to find out is waiting too long.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Least privilege: this workflow only reads the repository. It publishes nothing, comments on
+# nothing, and deploys nothing, so it has no reason to hold a writable token.
+permissions:
+  contents: read
+
+# A new push supersedes the run already in progress for that branch. On a free-tier minute
+# budget there is no value in finishing a build for a commit nobody will look at again.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 21)
+    runs-on: ubuntu-latest
+    # A hung build must not quietly consume hours of the monthly allowance. The suite takes a
+    # few minutes; anything approaching this cap is stuck, not slow.
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          # Built into setup-java - no separate actions/cache step to configure or keep correct.
+          cache: maven
+
+      # clean, deliberately. Maven's incremental compilation has already let broken code through
+      # in this project: test stubs that no longer implemented a changed interface compiled fine
+      # against stale .class files and the suite went green. CI is the one place that should
+      # never inherit a previous build's output.
+      #
+      # verify rather than test, so the executable jar is proven to assemble too - a packaging
+      # failure found here is cheaper than one found at deploy time.
+      #
+      # No secrets are set, and that is intentional rather than an oversight. The suite runs
+      # entirely against src/test/resources/application.properties, which uses ai.provider=mock
+      # and fixture credentials. The live tests that call real AI providers are gated behind
+      # -Dlive.ai=true and stay skipped here, so CI can never spend API quota or leak a key.
+      - name: Build and test
+        working-directory: backend
+        run: ./mvnw -B --no-transfer-progress clean verify
+
+      # Uploaded only on failure: a green run's reports are noise, while a red one is far
+      # quicker to diagnose from the surefire output than from scrolling the log.
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ci, not install: it installs exactly what the lockfile pins and fails if package.json and
+      # the lockfile disagree. A build that quietly resolves different versions than a developer
+      # has locally is a build that proves nothing.
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # Run separately from the build because Vite does not typecheck - it strips types and
+      # bundles. Without this step a type error would sail through a "successful" build.
+      - name: Typecheck
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
