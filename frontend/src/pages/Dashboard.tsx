@@ -190,6 +190,26 @@ export function Dashboard() {
     setFilterQuery("");
   };
 
+  // Windowing the already-loaded list, not a second network request. The whole list is fetched
+  // once and filtered client-side (see visibleTransactions above); a full statement upload or a
+  // long history can still put hundreds of rows in one <table>, which is what actually gets
+  // unusable to scroll and render - paging the DOM output fixes that without touching how
+  // filtering works.
+  const PAGE_SIZE = 25;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(visibleTransactions.length / PAGE_SIZE));
+  const pageInBounds = Math.min(currentPage, totalPages);
+  const pagedTransactions = visibleTransactions.slice(
+    (pageInBounds - 1) * PAGE_SIZE,
+    pageInBounds * PAGE_SIZE
+  );
+
+  // A filter change can shrink the result set below the page you were on - reset rather than
+  // show an empty page that looks like "no results" when results exist on page 1.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterCategory, filterSourceType, filterDirection, filterFrom, filterTo, filterQuery]);
+
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -576,7 +596,7 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {visibleTransactions.map((t) => (
+              {pagedTransactions.map((t) => (
                 <tr key={t.id} className={editingId === t.id ? "editing-row" : undefined}>
                   <td>{t.date}</td>
                   <td>{t.merchant}</td>
@@ -598,6 +618,28 @@ export function Dashboard() {
               ))}
             </tbody>
           </table>
+        )}
+
+        {visibleTransactions.length > PAGE_SIZE && (
+          <div className="pager">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={pageInBounds <= 1}
+            >
+              &larr; Prev
+            </button>
+            <span>
+              Page {pageInBounds} of {totalPages} ({visibleTransactions.length} transactions)
+            </span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={pageInBounds >= totalPages}
+            >
+              Next &rarr;
+            </button>
+          </div>
         )}
       </section>
     </div>
