@@ -32,27 +32,48 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
      * prompt. Anything that still overruns is caught by the finish_reason guard rather than
      * being trusted.
      * <p>
-     * TOKENS_PER_EXTRACTED_ROW and FIXED_OUTPUT_OVERHEAD were revised on 2026-08-27 against
-     * real measurements (see StatementTextChunker.ROWS_PER_CHUNK for the full table): actual
+     * These four defaults are Groq's own numbers, revised on 2026-08-27 against real
+     * measurements (see StatementTextChunker.ROWS_PER_CHUNK for the full table): actual
      * completion cost ran ~40-67 tokens per extracted row, not 130, and the true fixed
-     * component was closer to 250 than 700. The original values were never wrong about
-     * direction - "estimate high" was the right instinct to avoid truncation - but 130 was
-     * roughly double the real cost, and since Groq counts the <em>requested</em> max_tokens
-     * against the rate limit whether used or not, that overestimate was being paid in full on
-     * every single chunk. Combined with a real 480-row statement needing 32 chunks at the old
-     * ROWS_PER_CHUNK, the two overestimates compounded into a ~15-minute extraction that then
-     * hit the frontend's polling timeout.
+     * component was closer to 250 than 700.
+     * <p>
+     * They are deliberately overridable per subclass rather than shared outright. That same day
+     * of measurement found OpenRouter's configured free model (nemotron-3-super-120b) needing
+     * <b>5324</b> completion tokens for a 40-row chunk that Groq's gpt-oss-20b finished in 2380
+     * and Cloudflare's llama-3.1-8b-instruct in 2153 - more than double Groq's cost for
+     * identical input. A single shared budget tuned to Groq's numbers is exactly what made
+     * OpenRouter truncate mid-extraction (finish_reason=length) the moment a chunk grew large
+     * enough to expose the gap; see OpenRouterProvider for its own measured multiplier.
      */
-    private static final int TOKENS_PER_EXTRACTED_ROW = 85;
-    private static final int FIXED_OUTPUT_OVERHEAD = 250;
-    private static final int MIN_COMPLETION_TOKENS = 800;
-    private static final int MAX_COMPLETION_TOKENS = 4500;
+    protected int tokensPerExtractedRow() {
+        return 85;
+    }
 
-    /** Enough for a few short sentences plus reasoning overhead - see recommend(). */
-    private static final int RECOMMENDATION_COMPLETION_TOKENS = 1500;
+    protected int fixedOutputOverhead() {
+        return 250;
+    }
+
+    protected int minCompletionTokens() {
+        return 800;
+    }
+
+    protected int maxCompletionTokens() {
+        return 4500;
+    }
+
+    /**
+     * Enough for a few short sentences plus reasoning overhead - see recommend(). Overridable
+     * for the same reason the extraction budget above is: a model that runs ~2.2x more verbose
+     * on structured extraction is not assumed to be exactly as concise on a different task.
+     */
+    protected int recommendationCompletionTokens() {
+        return 1500;
+    }
 
     /** A manual entry describes one purchase, occasionally a handful. */
-    private static final int MANUAL_ENTRY_COMPLETION_TOKENS = 1500;
+    protected int manualEntryCompletionTokens() {
+        return 1500;
+    }
 
     /**
      * Rough but deliberately generous row count - every non-blank line is treated as a
@@ -60,10 +81,10 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
      * high is the safe direction here: the cost is rate-limit headroom, while estimating low
      * costs extracted transactions.
      */
-    static int estimateCompletionTokens(String text) {
+    int estimateCompletionTokens(String text) {
         long rows = text == null ? 0 : text.lines().filter(line -> !line.isBlank()).count();
-        long estimate = FIXED_OUTPUT_OVERHEAD + rows * TOKENS_PER_EXTRACTED_ROW;
-        return (int) Math.clamp(estimate, MIN_COMPLETION_TOKENS, MAX_COMPLETION_TOKENS);
+        long estimate = fixedOutputOverhead() + rows * tokensPerExtractedRow();
+        return (int) Math.clamp(estimate, minCompletionTokens(), maxCompletionTokens());
     }
 
     private final ProviderHttp http;
@@ -109,7 +130,7 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
         // over-generous reservation is spent whether or not it is used.
         String content = chatCompletion(
                 AiExtractionSupport.buildRecommendationPrompt(spendFactsSummary),
-                RECOMMENDATION_COMPLETION_TOKENS);
+                recommendationCompletionTokens());
         return AiExtractionSupport.parseRecommendations(content);
     }
 
@@ -118,7 +139,7 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
         // One sentence in, at most a few transactions out - a small fixed budget is plenty.
         String content = chatCompletion(
                 AiExtractionSupport.buildManualEntryPrompt(naturalLanguage, today),
-                MANUAL_ENTRY_COMPLETION_TOKENS);
+                manualEntryCompletionTokens());
         return AiExtractionSupport.parseTransactions(content);
     }
 
@@ -126,7 +147,7 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
     public List<String> recommendCredit(String creditFactsSummary) {
         String content = chatCompletion(
                 AiExtractionSupport.buildCreditAnalysisPrompt(creditFactsSummary),
-                RECOMMENDATION_COMPLETION_TOKENS);
+                recommendationCompletionTokens());
         return AiExtractionSupport.parseRecommendations(content);
     }
 
