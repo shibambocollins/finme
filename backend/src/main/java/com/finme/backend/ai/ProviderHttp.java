@@ -30,6 +30,26 @@ final class ProviderHttp {
     private static final Duration DEFAULT_RATE_LIMIT_WAIT = Duration.ofSeconds(20);
     private static final int MAX_RATE_LIMIT_RETRIES = 4;
 
+    /**
+     * The longest wait this class will ever sleep through in one attempt. Discovered
+     * 2026-08-27: Groq enforces two independent 429 limits on two different clocks - a per-
+     * <b>minute</b> token budget (the one the rest of this class was built around, header
+     * {@code x-ratelimit-limit-tokens: 8000}, resets in well under a minute) and a separate
+     * per-<b>hour</b> request-count budget ({@code x-ratelimit-limit-requests: 1000}, seen
+     * resetting over an hour away). Every retry attempt is itself another request, so a chain
+     * of 429s can push an account toward the hourly ceiling even while comfortably under the
+     * token one - and when that happens, Groq's reported wait is tied to the slow clock, not
+     * the fast one. Measured live: a 480-row statement's 12th chunk was told to wait 638
+     * seconds - blowing past the frontend's own polling timeout for one chunk out of twelve.
+     * <p>
+     * Honouring an arbitrarily long wait defeats the fallback chain's entire purpose. The chain
+     * exists so that a provider having a bad day costs a handoff to the next one, not a stall -
+     * so a wait this class cannot honour quickly is treated as failure, not patience: the
+     * exception propagates immediately and FallbackAiProviderChain moves on to OpenRouter,
+     * which has its own, independent budget.
+     */
+    private static final Duration MAX_SINGLE_RATE_LIMIT_WAIT = Duration.ofSeconds(90);
+
     private final RestClient restClient;
     private final String apiKey;
     private final String providerName;
@@ -69,6 +89,16 @@ final class ProviderHttp {
                             + " still rate limited after " + MAX_RATE_LIMIT_RETRIES + " retries", ex);
                 }
                 Duration wait = retryAfter(ex);
+                if (wait.compareTo(MAX_SINGLE_RATE_LIMIT_WAIT) > 0) {
+                    // A wait this long means the fast per-minute budget is not what tripped -
+                    // sleeping through it would trap this call inside a provider the fallback
+                    // chain exists specifically to move past.
+                    log.info("{} rate limited for {}s - longer than this app will wait for one "
+                                    + "provider, handing off to the next one instead",
+                            providerName, wait.toSeconds());
+                    throw new AiProviderException(providerName + " rate limited for "
+                            + wait.toSeconds() + "s, too long to wait out on this provider", ex);
+                }
                 log.info("{} rate limited, waiting {}s before retry {} of {}",
                         providerName, wait.toSeconds(), attempt, MAX_RATE_LIMIT_RETRIES);
                 sleep(wait);
@@ -86,7 +116,8 @@ final class ProviderHttp {
      * whatever is found, because resuming exactly on the boundary tends to race the provider's
      * own window and 429 again.
      */
-    private static Duration retryAfter(HttpClientErrorException.TooManyRequests ex) {
+    /** Package-private (not private) purely so ProviderHttpTest can exercise it directly. */
+    static Duration retryAfter(HttpClientErrorException.TooManyRequests ex) {
         String header = ex.getResponseHeaders() == null ? null : ex.getResponseHeaders().getFirst("Retry-After");
         if (header != null) {
             try {
