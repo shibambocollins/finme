@@ -26,7 +26,8 @@ export function AuthCallback() {
       return;
     }
 
-    completeOAuthLogin(token, payload.email);
+    const displayName = typeof payload.displayName === "string" ? payload.displayName : null;
+    completeOAuthLogin(token, payload.email, displayName);
     navigate("/dashboard", { replace: true });
   }, [searchParams, completeOAuthLogin, navigate]);
 
