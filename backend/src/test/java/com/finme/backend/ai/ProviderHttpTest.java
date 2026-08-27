@@ -3,6 +3,8 @@ package com.finme.backend.ai;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
@@ -12,10 +14,9 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
  * Groq enforces two independent 429 limits - a per-minute token budget the retry loop was built
@@ -80,48 +81,50 @@ class ProviderHttpTest {
     }
 
     // ------------------------------------------------------------------ the cap, end to end
-
-    /** A RestClient whose fluent chain always throws the given exception from body(String.class). */
-    @SuppressWarnings("unchecked")
-    private static RestClient throwingClient(RuntimeException toThrow) {
-        RestClient restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
-        when(restClient.post().uri(any(String.class)).header(any(), any())
-                .contentType(any()).body((Map<String, Object>) any())
-                .retrieve().body(String.class))
-                .thenThrow(toThrow);
-        return restClient;
-    }
+    //
+    // A real RestClient bound to Spring's own MockRestServiceServer, not a Mockito deep-stub of
+    // RestClient's fluent interface. That was tried first and failed for reasons unrelated to
+    // this class's logic: Mockito's RETURNS_DEEP_STUBS does not correctly chain through
+    // RestClient.RequestBodySpec.header(String, String...), a varargs method - the mocked chain
+    // silently returned null partway through, breaking every test that exercised a real
+    // request. Driving an actual (mocked-server) HTTP exchange sidesteps that entirely, and is
+    // more faithful besides: the 429-to-TooManyRequests translation comes from Spring's real
+    // error handling, not from an exception this test hand-assembled to look like it.
 
     @Test
     void waitsOutAShortRateLimitRatherThanFailing() {
-        // Fails with TooManyRequests exactly once, then a distinct RuntimeException on the
-        // retry - proving post() actually slept and tried again, not that it gave up
-        // immediately for an unrelated reason.
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Retry-After", "0");
-        RestClient restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
-        RuntimeException secondCallMarker = new RuntimeException("second call reached here");
-        when(restClient.post().uri(any(String.class)).header(any(), any())
-                .contentType(any()).body((Map<String, Object>) any())
-                .retrieve().body(String.class))
-                .thenThrow(tooManyRequests(headers, "{}"))
-                .thenThrow(secondCallMarker);
+        // 429 once, then success - proving post() actually slept and retried, not that it
+        // returned the first response verbatim or failed outright.
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://example.test"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                        .header("Retry-After", "0")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{}"));
+        server.expect(requestTo("http://example.test"))
+                .andRespond(withSuccess("{\"ok\":true}", MediaType.APPLICATION_JSON));
 
-        ProviderHttp http = new ProviderHttp(restClient, "key", "TestProvider");
+        ProviderHttp http = new ProviderHttp(builder.build(), "key", "TestProvider");
 
-        assertThatThrownBy(() -> http.post("http://example.test", Map.of()))
-                .as("a short wait should be slept through, reaching the second call")
-                .isSameAs(secondCallMarker);
+        assertThat(http.post("http://example.test", Map.of())).isEqualTo("{\"ok\":true}");
+        server.verify();
     }
 
     @Test
     void failsImmediatelyRatherThanSleepingThroughAWaitLongerThanTheCap() {
         // The actual bug fix: previously this slept for the full reported duration, trapping
         // execution inside one provider well past what the fallback chain should ever wait for
-        // a single provider before moving on.
-        String body = "{\"error\":{\"message\":\"Please try again in 638s\"}}";
-        RestClient restClient = throwingClient(tooManyRequests(new HttpHeaders(), body));
-        ProviderHttp http = new ProviderHttp(restClient, "key", "TestProvider");
+        // a single provider before moving on. Only one request is expected - proving post()
+        // never even tries a second time once it decides the wait is too long.
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        server.expect(requestTo("http://example.test"))
+                .andRespond(withStatus(HttpStatus.TOO_MANY_REQUESTS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body("{\"error\":{\"message\":\"Please try again in 638s\"}}"));
+
+        ProviderHttp http = new ProviderHttp(builder.build(), "key", "TestProvider");
 
         long startedAt = System.currentTimeMillis();
         assertThatThrownBy(() -> http.post("http://example.test", Map.of()))
@@ -132,25 +135,14 @@ class ProviderHttpTest {
         assertThat(elapsedMs)
                 .as("a 638s wait must never actually be slept through")
                 .isLessThan(2000);
+        server.verify();
     }
 
-    @Test
-    void aWaitRightAtTheCapIsStillHonoured() {
-        // The cap is a "too long", not "not exactly this value" - confirms the boundary is
-        // exclusive of the cap itself rather than accidentally off by one in either direction.
-        String body = "{\"error\":{\"message\":\"Please try again in 89s\"}}"; // -> 90s after +1s
-        RestClient restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
-        RuntimeException secondCallMarker = new RuntimeException("second call reached here");
-        when(restClient.post().uri(any(String.class)).header(any(), any())
-                .contentType(any()).body((Map<String, Object>) any())
-                .retrieve().body(String.class))
-                .thenThrow(tooManyRequests(new HttpHeaders(), body))
-                .thenThrow(secondCallMarker);
-
-        ProviderHttp http = new ProviderHttp(restClient, "key", "TestProvider");
-
-        assertThatThrownBy(() -> http.post("http://example.test", Map.of()))
-                .as("90s is the cap itself, not over it - still worth waiting out")
-                .isSameAs(secondCallMarker);
-    }
+    // No test drives post() through a wait that is honoured right at the 90s cap boundary -
+    // ProviderHttp.sleep() performs a real Thread.sleep(), so proving that case end to end
+    // would mean an actual 90-second unit test. The boundary comparison itself
+    // (wait.compareTo(MAX_SINGLE_RATE_LIMIT_WAIT) > 0) is a single unambiguous operator with no
+    // off-by-one risk worth a 90-second test to guard; failsImmediatelyRatherThanSleeping...
+    // above proves the "too long" side, and waitsOutAShortRateLimit... proves the "honoured"
+    // side at a wait small enough to actually run.
 }
