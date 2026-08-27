@@ -1,13 +1,18 @@
 package com.finme.backend.controller;
 
+import com.finme.backend.dto.CalendarResponse;
 import com.finme.backend.dto.DashboardSummaryResponse;
 import com.finme.backend.dto.RecommendationsResponse;
 import com.finme.backend.security.AuthenticatedUser;
 import com.finme.backend.service.DashboardService;
 import com.finme.backend.service.RecommendationService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.YearMonth;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -40,5 +45,12 @@ public class DashboardController {
     @GetMapping("/recommendations")
     public RecommendationsResponse recommendations() {
         return recommendationService.getRecommendations(authenticatedUser.currentUserId());
+    }
+
+    /** One day per calendar tile, including zero-spend days. Defaults to the current month. */
+    @GetMapping("/calendar")
+    public CalendarResponse calendar(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
+        return dashboardService.getCalendar(authenticatedUser.currentUserId(), month);
     }
 }
