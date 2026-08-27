@@ -23,12 +23,21 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
-    public String issueToken(Long userId, String email) {
+    /**
+     * displayName rides in the token the same way email does, rather than needing a separate
+     * "who am I" endpoint the frontend would have to call after every login - the frontend
+     * already decodes this token client-side for email (see jwt.ts), so adding one more claim
+     * costs nothing new. The tradeoff is the same one that already applied to email: if a
+     * user's display name changes mid-session, an already-issued token keeps the old value
+     * until it expires or they log in again. Acceptable for a field with no edit UI yet.
+     */
+    public String issueToken(Long userId, String email, String displayName) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
+                .claim("displayName", displayName)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(key)
