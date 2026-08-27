@@ -57,10 +57,11 @@ class FeatureEndToEndHttpTest {
     private HttpHeaders authHeaders() {
         User user = new User();
         user.setEmail("e2e-" + System.nanoTime() + "@example.com");
+        user.setDisplayName("E2E Test User");
         user.setEmailVerified(true);
         user = userRepository.save(user);
 
-        String token = jwtService.issueToken(user.getId(), user.getEmail());
+        String token = jwtService.issueToken(user.getId(), user.getEmail(), user.getDisplayName());
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -198,6 +199,49 @@ class FeatureEndToEndHttpTest {
         assertThat(calendar.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(calendar.getBody().get("month")).isEqualTo("2026-07");
         assertThat((List<?>) calendar.getBody().get("days")).hasSize(31);
+    }
+
+    @Test
+    void registrationCarriesTheDisplayNameThroughToLoginAndTheJwt() {
+        String email = "e2e-register-" + System.nanoTime() + "@example.com";
+
+        ResponseEntity<Map> registered = rest.postForEntity(
+                url("/api/auth/register"),
+                new HttpEntity<>(Map.of("email", email, "password", "password123", "displayName", "  Jane Doe  ")),
+                Map.class);
+        assertThat(registered.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Password registration requires clicking an emailed link before login works - not what
+        // this test is about, so the account is verified directly rather than standing up a
+        // real SMTP round trip. Everything above this line went through the real, validated
+        // /api/auth/register endpoint; only the verification step is bypassed.
+        User user = userRepository.findByEmail(email).orElseThrow();
+        assertThat(user.getDisplayName())
+                .as("stripped, the same way every other free-text field in this app is")
+                .isEqualTo("Jane Doe");
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        ResponseEntity<Map> loggedIn = rest.postForEntity(
+                url("/api/auth/login"),
+                new HttpEntity<>(Map.of("email", email, "password", "password123")),
+                Map.class);
+        assertThat(loggedIn.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(loggedIn.getBody().get("displayName")).isEqualTo("Jane Doe");
+
+        String token = (String) loggedIn.getBody().get("token");
+        assertThat(jwtService.parseClaims(token).get("displayName", String.class)).isEqualTo("Jane Doe");
+    }
+
+    @Test
+    void registrationRejectsAMissingDisplayNameThroughRealValidation() {
+        assertThatThrownBy(() -> rest.postForEntity(
+                url("/api/auth/register"),
+                new HttpEntity<>(Map.of("email", "no-name@example.com", "password", "password123")),
+                Map.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
     }
 
     @Test
