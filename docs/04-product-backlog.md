@@ -124,3 +124,25 @@ often, and the wording of the requirement is explicit about which it means. Both
 reported per account, since an account near its own limit matters independently. The FR-2.3.3
 disclaimer is a server-side constant, never model output, so it cannot be reworded or omitted
 by a bad generation.
+
+## Post-Phase 2 — UI/UX Enhancements (beyond the original 9-iteration plan)
+
+Goal: address usability gaps found while building Phase 1/2, ahead of the visual redesign
+Collins deferred until all iterations were done (see `01-project-proposal.md` intro).
+
+- As a user, I want to correct a miscategorised or wrong transaction, so that a bad AI
+  extraction does not sit wrong in my records forever.
+- As a user, I want to search and filter my transaction list, so that I can find something
+  specific once the list gets long.
+- As a user, I want to set a monthly budget per category and see how I am tracking against
+  it, so that I can catch overspending before the month ends.
+- As a user, I want to see my spending on a calendar, day by day, so that I can spot which
+  days actually drove a heavy month.
+
+Built 2026-08-26. No AI involved in any of these four - transaction correction, filtering,
+budget tracking, and calendar totals are all deterministic CRUD/arithmetic, consistent with
+FR-2.2.1's principle applied by consistency rather than because a specific requirement demands
+it. Category remains free text everywhere (it always was, at the entity level - only the AI
+extraction prompt ever suggested a fixed list), so a correction or a budget can name any
+category the user wants. Verified end-to-end through real HTTP with a real JWT
+(`FeatureEndToEndHttpTest`), not just at the service layer.
