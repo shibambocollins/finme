@@ -39,7 +39,10 @@ export function Login() {
   return (
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h1>Log in to FinMe</h1>
+        <p className="auth-brand">
+          Fin<span>Me</span>
+        </p>
+        <h1>Log in</h1>
         <label htmlFor="email">Email</label>
         <input
           id="email"

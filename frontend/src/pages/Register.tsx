@@ -72,7 +72,10 @@ export function Register() {
   return (
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h1>Create your FinMe account</h1>
+        <p className="auth-brand">
+          Fin<span>Me</span>
+        </p>
+        <h1>Create your account</h1>
         <label htmlFor="displayName">Your name</label>
         <input
           id="displayName"
