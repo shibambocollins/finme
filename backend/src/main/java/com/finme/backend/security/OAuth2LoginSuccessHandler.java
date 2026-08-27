@@ -48,8 +48,14 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             return;
         }
 
-        User user = authService.findOrCreateOAuthUser(email);
-        String token = jwtService.issueToken(user.getId(), user.getEmail());
+        // Available because this client's requested scope includes "profile" (the default for
+        // Spring's CommonOAuth2Provider.GOOGLE registration, not something configured here
+        // specially) - Google's userinfo response carries the account's own display name under
+        // this attribute.
+        String googleDisplayName = oauth2User.getAttribute("name");
+
+        User user = authService.findOrCreateOAuthUser(email, googleDisplayName);
+        String token = jwtService.issueToken(user.getId(), user.getEmail(), user.getDisplayName());
         String encodedToken = URLEncoder.encode(token, StandardCharsets.UTF_8);
 
         response.sendRedirect(frontendRedirectUri + "?token=" + encodedToken);

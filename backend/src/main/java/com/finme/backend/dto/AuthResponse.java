@@ -1,4 +1,4 @@
 package com.finme.backend.dto;
 
-public record AuthResponse(String token, String email) {
+public record AuthResponse(String token, String email, String displayName) {
 }
