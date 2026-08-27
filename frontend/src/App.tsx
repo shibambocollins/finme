@@ -8,18 +8,21 @@ import { Credit } from "./pages/Credit";
 import { Budgets } from "./pages/Budgets";
 import { CalendarPage } from "./pages/Calendar";
 import { AuthCallback } from "./pages/AuthCallback";
+import { Landing } from "./pages/Landing";
 import "./App.css";
 
-function RootRedirect() {
+/** The public marketing page at "/" for a logged-out visitor; a signed-in one goes straight to
+ *  the dashboard instead of seeing sample data for an app they're already inside. */
+function RootRoute() {
   const { token } = useAuth();
-  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
+  return token ? <Navigate to="/dashboard" replace /> : <Landing />;
 }
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
-        <Route path="/" element={<RootRedirect />} />
+        <Route path="/" element={<RootRoute />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/auth-callback" element={<AuthCallback />} />
