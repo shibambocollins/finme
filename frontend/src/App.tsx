@@ -5,6 +5,8 @@ import { Register } from "./pages/Register";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { Credit } from "./pages/Credit";
+import { Budgets } from "./pages/Budgets";
+import { CalendarPage } from "./pages/Calendar";
 import { AuthCallback } from "./pages/AuthCallback";
 import "./App.css";
 
@@ -34,6 +36,22 @@ function App() {
           element={
             <ProtectedRoute>
               <Credit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/budgets"
+          element={
+            <ProtectedRoute>
+              <Budgets />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/calendar"
+          element={
+            <ProtectedRoute>
+              <CalendarPage />
             </ProtectedRoute>
           }
         />
