@@ -54,6 +54,7 @@ public class AuthService {
 
         User user = new User();
         user.setEmail(request.email());
+        user.setDisplayName(request.displayName().strip());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         issueVerificationToken(user);
         userRepository.save(user);
@@ -78,7 +79,10 @@ public class AuthService {
             throw new EmailNotVerifiedException();
         }
 
-        return new AuthResponse(jwtService.issueToken(user.getId(), user.getEmail()), user.getEmail());
+        return new AuthResponse(
+                jwtService.issueToken(user.getId(), user.getEmail(), user.getDisplayName()),
+                user.getEmail(),
+                user.getDisplayName());
     }
 
     /** Clicked from the emailed link - issues a JWT immediately, no separate login step needed. */
@@ -96,7 +100,10 @@ public class AuthService {
         user.setVerificationTokenExpiresAt(null);
         userRepository.save(user);
 
-        return new AuthResponse(jwtService.issueToken(user.getId(), user.getEmail()), user.getEmail());
+        return new AuthResponse(
+                jwtService.issueToken(user.getId(), user.getEmail(), user.getDisplayName()),
+                user.getEmail(),
+                user.getDisplayName());
     }
 
     public MessageResponse resendVerification(String email) {
@@ -120,8 +127,13 @@ public class AuthService {
      * hash. Google has already proven ownership of the email, so the account is verified
      * immediately either way - including flipping a previously-unverified password account,
      * since a successful Google login is equally strong proof of ownership.
+     *
+     * @param googleDisplayName the Google account's own display name, used only to backfill a
+     *                          user who does not already have one - a Google login must never
+     *                          overwrite a name the user set at registration, or one an earlier
+     *                          Google login already backfilled.
      */
-    public User findOrCreateOAuthUser(String email) {
+    public User findOrCreateOAuthUser(String email, String googleDisplayName) {
         User user = userRepository.findByEmail(email)
                 .orElseGet(() -> {
                     User newUser = new User();
@@ -129,8 +141,17 @@ public class AuthService {
                     return newUser;
                 });
 
+        boolean changed = false;
         if (!user.isEmailVerified()) {
             user.setEmailVerified(true);
+            changed = true;
+        }
+        if ((user.getDisplayName() == null || user.getDisplayName().isBlank())
+                && googleDisplayName != null && !googleDisplayName.isBlank()) {
+            user.setDisplayName(googleDisplayName.strip());
+            changed = true;
+        }
+        if (changed) {
             user = userRepository.save(user);
         }
 
