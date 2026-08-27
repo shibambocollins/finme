@@ -9,6 +9,7 @@ interface MessageResponse {
 }
 
 export function Register() {
+  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +22,11 @@ export function Register() {
     setError(null);
     setSubmitting(true);
     try {
-      await apiPostJson<MessageResponse>("/api/auth/register", { email, password });
+      await apiPostJson<MessageResponse>("/api/auth/register", {
+        email,
+        password,
+        displayName: displayName.trim(),
+      });
       setRegisteredEmail(email);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registration failed");
@@ -68,6 +73,15 @@ export function Register() {
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
         <h1>Create your FinMe account</h1>
+        <label htmlFor="displayName">Your name</label>
+        <input
+          id="displayName"
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          maxLength={100}
+          required
+        />
         <label htmlFor="email">Email</label>
         <input
           id="email"

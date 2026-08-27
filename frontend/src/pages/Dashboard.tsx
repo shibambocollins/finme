@@ -98,7 +98,7 @@ const editFormFrom = (t: Transaction): TransactionEditForm => ({
 });
 
 export function Dashboard() {
-  const { token, email, logout } = useAuth();
+  const { token, email, displayName, logout } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [insights, setInsights] = useState<RecommendationsResponse | null>(null);
@@ -374,7 +374,9 @@ export function Dashboard() {
           <Link to="/calendar">Calendar</Link>
           <Link to="/budgets">Budgets</Link>
           <Link to="/credit">Credit</Link>
-          <span>{email}</span>
+          {/* Falls back to email only for an account that predates this field, or a stored
+              session from before this change - registration and Google login both set it now. */}
+          <span>{displayName || email}</span>
           <button type="button" onClick={logout}>
             Log out
           </button>
