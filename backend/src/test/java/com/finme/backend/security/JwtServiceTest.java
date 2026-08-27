@@ -12,10 +12,11 @@ class JwtServiceTest {
     );
 
     @Test
-    void issuedTokenRoundTripsUserIdAndEmail() {
-        String token = jwtService.issueToken(42L, "user@example.com");
+    void issuedTokenRoundTripsUserIdEmailAndDisplayName() {
+        String token = jwtService.issueToken(42L, "user@example.com", "Jane Doe");
 
         assertThat(jwtService.extractUserId(token)).isEqualTo(42L);
         assertThat(jwtService.parseClaims(token).get("email", String.class)).isEqualTo("user@example.com");
+        assertThat(jwtService.parseClaims(token).get("displayName", String.class)).isEqualTo("Jane Doe");
     }
 }
