@@ -468,3 +468,25 @@
   font-size: 11px;
   opacity: 0.85;
 }
+
+/* Transaction list pager - windows the already-loaded, already-filtered list; see Dashboard.tsx
+   for why this stays client-side rather than becoming a second network round trip. */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.pager button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pager button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
