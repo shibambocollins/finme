@@ -31,11 +31,22 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
      * So: estimate what this specific text needs, and cap it low enough to leave room for the
      * prompt. Anything that still overruns is caught by the finish_reason guard rather than
      * being trusted.
+     * <p>
+     * TOKENS_PER_EXTRACTED_ROW and FIXED_OUTPUT_OVERHEAD were revised on 2026-08-27 against
+     * real measurements (see StatementTextChunker.ROWS_PER_CHUNK for the full table): actual
+     * completion cost ran ~40-67 tokens per extracted row, not 130, and the true fixed
+     * component was closer to 250 than 700. The original values were never wrong about
+     * direction - "estimate high" was the right instinct to avoid truncation - but 130 was
+     * roughly double the real cost, and since Groq counts the <em>requested</em> max_tokens
+     * against the rate limit whether used or not, that overestimate was being paid in full on
+     * every single chunk. Combined with a real 480-row statement needing 32 chunks at the old
+     * ROWS_PER_CHUNK, the two overestimates compounded into a ~15-minute extraction that then
+     * hit the frontend's polling timeout.
      */
-    private static final int TOKENS_PER_EXTRACTED_ROW = 130;
-    private static final int FIXED_OUTPUT_OVERHEAD = 700;
-    private static final int MIN_COMPLETION_TOKENS = 1200;
-    private static final int MAX_COMPLETION_TOKENS = 5000;
+    private static final int TOKENS_PER_EXTRACTED_ROW = 85;
+    private static final int FIXED_OUTPUT_OVERHEAD = 250;
+    private static final int MIN_COMPLETION_TOKENS = 800;
+    private static final int MAX_COMPLETION_TOKENS = 4500;
 
     /** Enough for a few short sentences plus reasoning overhead - see recommend(). */
     private static final int RECOMMENDATION_COMPLETION_TOKENS = 1500;
