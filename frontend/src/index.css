@@ -1,52 +1,84 @@
+/*
+ * Design tokens, ported from the FinMe Foundations reference (colour, type, controls, states -
+ * see docs/ for the product rules these serve). Warm paper ground, forest/sage greens, clay as
+ * the only alert colour. Hanken Grotesk for everything human, JetBrains Mono for everything
+ * machine-read (money, dates, labels).
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Surfaces */
+  --paper: #fbfaf7;
+  --paper-alt: #fcfbf7;
+  --card: #ffffff;
+  --stone: #f1efe8;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Ink - body text down to captions */
+  --ink: #14140f;
+  --ink-70: #2e2d26;
+  --ink-60: #5c5b52;
+  --ink-50: #6b6a61;
+  --ink-40: #8a8779;
+  --ink-30: #a8a497;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  /* Rules & input borders */
+  --line: #e3e1d9;
+  --line-strong: #dcd9cf;
+  --input-border: #c9c5b8;
+
+  /* Forest - primary action, positive data, the only two greens in the palette */
+  --forest: #12503a;
+  --forest-deep: #0a3527;
+  --forest-wash: #e4eee7;
+  --forest-border: #bfd6c8;
+  --sage: #7d8b6a;
+
+  /* Clay - the only alert colour. Never appears alone; always paired with a word or a symbol. */
+  --clay: #a65d3a;
+  --clay-deep: #7a3f24;
+  --clay-wash: #fbf3ee;
+  --clay-border: #e7d5c8;
+  --clay-border-strong: #d9b5a1;
+  --clay-input-border: #c79877;
+
+  --font-sans: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  color-scheme: light;
+  color: var(--ink-60);
+  background: var(--paper);
+  font: 16px/1.55 var(--font-sans);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-wrap: pretty;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+@keyframes finme-shimmer {
+  0% {
+    background-position: -420px 0;
+  }
+  100% {
+    background-position: 420px 0;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+@keyframes finme-blink {
+  0%,
+  60% {
+    opacity: 1;
   }
+  61%,
+  100% {
+    opacity: 0.25;
+  }
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
   }
 }
 
@@ -57,49 +89,74 @@
   box-sizing: border-box;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
 }
 
+a {
+  color: var(--forest);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--forest-deep);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: 3px;
+}
+
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3 {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
 }
 
 h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
+  font-size: clamp(28px, 3.4vw, 36px);
+  letter-spacing: -0.04em;
   margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
 }
+
+h2 {
+  font-size: 22px;
+  line-height: 1.15;
+  margin: 0 0 8px;
+}
+
+h3 {
+  font-size: 17px;
+  margin: 0 0 6px;
+}
+
 p {
   margin: 0;
 }
 
 code {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   display: inline-flex;
   border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.35;
+  padding: 3px 7px;
+  background: var(--stone);
 }
