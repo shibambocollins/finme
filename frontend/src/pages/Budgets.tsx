@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostJson, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
+import { SUGGESTED_CATEGORIES } from "../constants/categories";
 
 interface BudgetStatus {
   id: number;
@@ -88,6 +89,7 @@ export function Budgets() {
         <form className="credit-form" onSubmit={submit}>
           <input
             type="text"
+            list="budget-category-suggestions"
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
             placeholder="Category, e.g. Groceries"
@@ -95,6 +97,11 @@ export function Budgets() {
             required
             disabled={busy}
           />
+          <datalist id="budget-category-suggestions">
+            {SUGGESTED_CATEGORIES.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
           <input
             type="number"
             step="0.01"

@@ -13,6 +13,8 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostForm, apiPostJson, apiPut, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
+import { SUGGESTED_CATEGORIES } from "../constants/categories";
+import { downloadCsv } from "../utils/csv";
 
 type Direction = "DEBIT" | "CREDIT";
 type PaymentMethod = "CASH" | "CARD" | "UNKNOWN";
@@ -154,6 +156,8 @@ export function Dashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  // Categories actually present in the data - drives the filter dropdown, where showing an
+  // unused category would just be a selectable option that always returns nothing.
   const categoryOptions = useMemo(
     () =>
       [...new Set(transactions.map((t) => t.category).filter((c): c is string => Boolean(c)))].sort((a, b) =>
@@ -161,6 +165,32 @@ export function Dashboard() {
       ),
     [transactions]
   );
+
+  // Seed list merged with whatever the user has actually used - drives the free-text category
+  // datalist, where the goal is good suggestions (including for a brand-new user with no
+  // transactions yet), not a restriction to what already exists.
+  const categorySuggestions = useMemo(
+    () => [...new Set([...SUGGESTED_CATEGORIES, ...categoryOptions])].sort((a, b) => a.localeCompare(b)),
+    [categoryOptions]
+  );
+
+  // Total-spend month-over-month only - the backend's category breakdown is all-time, not
+  // scoped per month, so a per-category comparison ("18% less on takeaways") would need a new
+  // aggregation query. This reads entirely from the trend series already fetched for the chart.
+  const spendComparison = useMemo(() => {
+    if (!summary || summary.trend.length < 2) return null;
+    const sorted = [...summary.trend].sort((a, b) => a.month.localeCompare(b.month));
+    const current = sorted[sorted.length - 1];
+    const previous = sorted[sorted.length - 2];
+    if (previous.amount === 0) return null;
+
+    const [year, month] = previous.month.split("-").map(Number);
+    const previousMonthLabel = new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "long" });
+    const percentChange = ((current.amount - previous.amount) / previous.amount) * 100;
+    const rounded = Math.round(Math.abs(percentChange));
+    if (rounded === 0) return `About the same as ${previousMonthLabel}`;
+    return `${rounded}% ${percentChange > 0 ? "more" : "less"} than ${previousMonthLabel}`;
+  }, [summary]);
 
   const visibleTransactions = useMemo(() => {
     const query = filterQuery.trim().toLowerCase();
@@ -188,6 +218,25 @@ export function Dashboard() {
     setFilterFrom("");
     setFilterTo("");
     setFilterQuery("");
+  };
+
+  // Exports whatever the filters currently show, not the whole account - "export what I'm
+  // looking at" matches how the filter bar already behaves everywhere else on this page.
+  const exportVisibleAsCsv = () => {
+    downloadCsv(
+      `finme-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Date", "Merchant", "Category", "Description", "Amount", "Direction", "Source", "Payment Method"],
+      visibleTransactions.map((t) => [
+        t.date,
+        t.merchant,
+        t.category ?? "",
+        t.description ?? "",
+        t.amount.toFixed(2),
+        t.direction,
+        t.sourceType,
+        t.paymentMethod,
+      ])
+    );
   };
 
   // Windowing the already-loaded list, not a second network request. The whole list is fetched
@@ -421,6 +470,7 @@ export function Dashboard() {
           <div className="stat-tile">
             <span className="stat-label">Total spend</span>
             <span className="stat-value">R{summary.totalSpend.toFixed(2)}</span>
+            {spendComparison && <span className="stat-label">{spendComparison}</span>}
           </div>
 
           {insights && (insights.recommendations.length > 0 || insights.unavailableReason) && (
@@ -507,6 +557,9 @@ export function Dashboard() {
                 Clear filters
               </button>
             )}
+            <button type="button" className="btn-quiet" onClick={exportVisibleAsCsv} disabled={visibleTransactions.length === 0}>
+              Export CSV
+            </button>
           </div>
         )}
 
@@ -587,7 +640,7 @@ export function Dashboard() {
           </form>
         )}
         <datalist id="category-suggestions">
-          {categoryOptions.map((c) => (
+          {categorySuggestions.map((c) => (
             <option key={c} value={c} />
           ))}
         </datalist>
