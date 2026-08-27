@@ -229,7 +229,7 @@ class LiveExtractionSmokeTest {
     @Test
     void handlesAStatementTooLargeForASingleCall() throws IOException, InterruptedException {
         long userId = 990002L;
-        int rows = 80;
+        int rows = 480; // TEMP: final end-to-end proof, reverted after
         MockMultipartFile file = new MockMultipartFile(
                 "file", "large-statement.pdf", "application/pdf", buildLargeStatementPdf(rows));
 
