@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet, ApiError } from "../api/client";
+import { AppHeader } from "../components/AppHeader";
 
 interface CalendarDay {
   date: string;
@@ -97,21 +97,20 @@ export function CalendarPage() {
   );
 
   return (
-    <main className="page">
-      <header className="page-header">
+    <>
+      <AppHeader active="calendar" />
+      <main className="page">
         <h1>Calendar</h1>
-        <Link to="/dashboard">Back to dashboard</Link>
-      </header>
 
       {error && <p className="form-error">{error}</p>}
 
       <div className="calendar-nav">
-        <button type="button" onClick={() => setMonth((m) => shiftMonth(m, -1))} disabled={loading}>
-          &larr; Prev
+        <button type="button" className="btn-icon" onClick={() => setMonth((m) => shiftMonth(m, -1))} disabled={loading}>
+          &larr;
         </button>
         <h2>{monthLabel(month)}</h2>
-        <button type="button" onClick={() => setMonth((m) => shiftMonth(m, 1))} disabled={loading}>
-          Next &rarr;
+        <button type="button" className="btn-icon" onClick={() => setMonth((m) => shiftMonth(m, 1))} disabled={loading}>
+          &rarr;
         </button>
       </div>
 
@@ -129,13 +128,15 @@ export function CalendarPage() {
           ))}
           {calendar.days.map((day) => {
             const dayNumber = Number(day.date.split("-")[2]);
-            const intensity = day.total > 0 ? Math.max(0.15, day.total / maxDaySpend) : 0;
+            // Capped well short of opaque - the tint is a legibility cue over dark ink text, not
+            // a replacement for the number, so it never gets dark enough to fight with it.
+            const intensity = day.total > 0 ? Math.min(0.32, Math.max(0.08, (day.total / maxDaySpend) * 0.32)) : 0;
             return (
               <button
                 key={day.date}
                 type="button"
                 className={`calendar-day${selectedDate === day.date ? " calendar-day--selected" : ""}`}
-                style={day.total > 0 ? { background: `rgba(170, 59, 255, ${intensity})` } : undefined}
+                style={day.total > 0 ? { background: `rgba(18, 80, 58, ${intensity})` } : undefined}
                 onClick={() => void openDay(day.date)}
               >
                 <span className="calendar-day-number">{dayNumber}</span>
@@ -152,7 +153,9 @@ export function CalendarPage() {
           {loadingDay ? (
             <p>Loading...</p>
           ) : dayTransactions.length === 0 ? (
-            <p>Nothing recorded on this day.</p>
+            <p className="recommendation-empty">
+              Nothing spent this day. A zero-spend day is a real result, not missing data.
+            </p>
           ) : (
             <ul className="recommendation-list">
               {dayTransactions.map((t) => (
@@ -167,6 +170,7 @@ export function CalendarPage() {
           )}
         </section>
       )}
-    </main>
+      </main>
+    </>
   );
 }

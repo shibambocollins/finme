@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostJson, ApiError } from "../api/client";
+import { AppHeader } from "../components/AppHeader";
 
 interface BudgetStatus {
   id: number;
@@ -72,11 +72,10 @@ export function Budgets() {
   };
 
   return (
-    <main className="page">
-      <header className="page-header">
+    <>
+      <AppHeader active="budgets" />
+      <main className="page">
         <h1>Budgets</h1>
-        <Link to="/dashboard">Back to dashboard</Link>
-      </header>
 
       {error && <p className="form-error">{error}</p>}
 
@@ -115,16 +114,25 @@ export function Budgets() {
       <section>
         <h2>This month</h2>
         {loading ? (
-          <p>Loading...</p>
+          <div className="skeleton-list">
+            {[64, 72, 58].map((width, i) => (
+              <div className="skeleton-row" key={i}>
+                <span className="skeleton-bar" style={{ width: "40%" }} />
+                <span className="skeleton-bar" style={{ width: `${width}px`, flex: "0 0 auto" }} />
+              </div>
+            ))}
+          </div>
         ) : budgets.length === 0 ? (
-          <p>No budgets set yet - add one above to start tracking against it.</p>
+          <div className="empty-state">
+            <p>No budgets set yet - add one above to start tracking against it.</p>
+          </div>
         ) : (
           <div className="budget-list">
             {budgets.map((b) => (
               <div key={b.id} className={`chart-card budget-card${b.overBudget ? " budget-card--over" : ""}`}>
                 <div className="budget-card-header">
                   <h3>{b.category}</h3>
-                  <button type="button" onClick={() => void remove(b)} disabled={busy}>
+                  <button type="button" className="btn-delete btn-small" onClick={() => void remove(b)} disabled={busy}>
                     Remove
                   </button>
                 </div>
@@ -148,6 +156,7 @@ export function Budgets() {
           </div>
         )}
       </section>
-    </main>
+      </main>
+    </>
   );
 }
