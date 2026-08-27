@@ -81,7 +81,7 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
      * high is the safe direction here: the cost is rate-limit headroom, while estimating low
      * costs extracted transactions.
      */
-    int estimateCompletionTokens(String text) {
+    protected int estimateCompletionTokens(String text) {
         long rows = text == null ? 0 : text.lines().filter(line -> !line.isBlank()).count();
         long estimate = fixedOutputOverhead() + rows * tokensPerExtractedRow();
         return (int) Math.clamp(estimate, minCompletionTokens(), maxCompletionTokens());
