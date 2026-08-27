@@ -263,18 +263,30 @@ export function Dashboard() {
    * Polls the statement until it leaves PROCESSING. The interval is deliberately unhurried:
    * extraction spends most of its time waiting out provider rate limits, so polling faster
    * would only add requests without learning anything sooner.
+   * <p>
+   * The deadline is 20 minutes, not a smaller "reasonable-looking" number, because free-tier
+   * providers really can take that long in a genuine worst case: measured live 2026-08-27, a
+   * chunk that fails over from Groq to OpenRouter (which happens whenever Groq's own quota is
+   * exhausted, not rarely) takes ~50-90s on OpenRouter alone, and a large statement can need a
+   * dozen chunks. Giving up too early would not fail any faster - extraction keeps running on
+   * the backend regardless of whether this tab is still watching it, so "check back shortly"
+   * genuinely means the statement will be there next time the dashboard is opened.
    */
   const pollUntilSettled = async (statementId: number): Promise<BankStatementResponse> => {
-    const deadline = Date.now() + 10 * 60 * 1000;
+    const deadline = Date.now() + 20 * 60 * 1000;
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       const statement = await apiGet<BankStatementResponse>(`/api/statements/${statementId}`, token);
       if (statement.status !== "PROCESSING") {
         return statement;
       }
+      // A percentage, not "part X of Y" - the chunk count is how the backend paces around a
+      // provider rate limit, not something a user should ever have to see or understand.
       setUploadProgress(
         statement.totalChunks
-          ? `Extracting... part ${statement.processedChunks ?? 0} of ${statement.totalChunks}`
+          ? `Extracting your transactions... ${Math.round(
+              ((statement.processedChunks ?? 0) / statement.totalChunks) * 100
+            )}%`
           : "Reading statement..."
       );
     }

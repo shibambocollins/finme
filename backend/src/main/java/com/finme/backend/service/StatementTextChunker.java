@@ -29,12 +29,30 @@ import java.util.regex.Pattern;
 public class StatementTextChunker {
 
     /**
-     * Lines of transaction rows per chunk. Sized against the measured budget rather than
-     * picked round: at roughly 130 output tokens per extracted transaction, 15 rows needs
-     * ~2000 completion tokens, which with the repeated header keeps a single request near
-     * 3200 tokens - comfortably inside the 8000 TPM ceiling.
+     * Lines of transaction rows per chunk.
+     * <p>
+     * Raised from 15 to 40 on 2026-08-27 after a real user's 480-row statement took over 15
+     * minutes and then timed out - the backend log showed a rate-limit wait on nearly every one
+     * of its 32 chunks. The category/merchant guidance added to the prompt on 2026-08-23 (for
+     * category-accuracy) costs roughly 850 fixed tokens, and that cost is paid <b>again on every
+     * chunk</b> - at 15 rows/chunk it dominated the request. Measured live against the real
+     * prompt at increasing chunk sizes:
+     * <pre>
+     * rows  prompt_tokens  completion_tokens  total   finish
+     *  15        1073            769          1842    stop
+     *  25        1223           1090          2313    stop
+     *  35        1371           1573          2944    stop
+     *  40        1448           2380          3828    stop
+     *  50        1591           2910          4501    stop
+     *  60        1740           3794          5534    stop
+     * </pre>
+     * All extracted every row, with generous margin under Groq's 8000-token single-request
+     * ceiling even at 60. 40 is deliberately not the most aggressive value tested (60 also
+     * passed) - real statements can carry longer merchant/reference text than the synthetic
+     * rows used to measure this, and a chunk size chosen right at the tested edge would have no
+     * room for that. At 40, a 480-row statement needs 12 chunks instead of 32.
      */
-    static final int ROWS_PER_CHUNK = 15;
+    static final int ROWS_PER_CHUNK = 40;
 
     /**
      * Upper bound on how many leading lines may be treated as header, for a statement whose
