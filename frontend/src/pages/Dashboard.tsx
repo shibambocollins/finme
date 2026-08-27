@@ -272,9 +272,13 @@ export function Dashboard() {
       if (statement.status !== "PROCESSING") {
         return statement;
       }
+      // A percentage, not "part X of Y" - the chunk count is how the backend paces around a
+      // provider rate limit, not something a user should ever have to see or understand.
       setUploadProgress(
         statement.totalChunks
-          ? `Extracting... part ${statement.processedChunks ?? 0} of ${statement.totalChunks}`
+          ? `Extracting your transactions... ${Math.round(
+              ((statement.processedChunks ?? 0) / statement.totalChunks) * 100
+            )}%`
           : "Reading statement..."
       );
     }
