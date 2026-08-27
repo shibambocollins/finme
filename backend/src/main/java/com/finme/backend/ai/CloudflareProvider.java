@@ -20,6 +20,20 @@ import java.util.Map;
  */
 public class CloudflareProvider implements AiProvider {
 
+    /**
+     * Discovered missing entirely on 2026-08-27, not merely mistuned: this request carried no
+     * {@code max_tokens} field at all, so every call ran on whatever Cloudflare's own unstated
+     * default is for this model. A 15-row chunk apparently stayed under it; a 40-row chunk did
+     * not, and the truncated response came back as invalid JSON ("Unexpected end-of-input"),
+     * which is exactly what a cut-off array looks like. Verified Cloudflare honours the
+     * parameter at all with a throwaway prompt (a 500-word request dropped from 1356 to 263
+     * characters once max_tokens:50 was added) before trusting it here.
+     * <p>
+     * The real number: the same 40-row chunk that needed 2380 tokens on Groq and 5324 on
+     * OpenRouter needed only <b>2153</b> here - close to Groq's, comfortably under this cap.
+     */
+    private static final int MAX_TOKENS = 4000;
+
     private final ProviderHttp http;
     private final String accountId;
     private final String model;
@@ -58,7 +72,8 @@ public class CloudflareProvider implements AiProvider {
     private String run(String prompt) {
         String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model;
         Map<String, Object> requestBody = Map.of(
-                "messages", List.of(Map.of("role", "user", "content", prompt))
+                "messages", List.of(Map.of("role", "user", "content", prompt)),
+                "max_tokens", MAX_TOKENS
         );
 
         String responseBody = http.post(url, requestBody);
