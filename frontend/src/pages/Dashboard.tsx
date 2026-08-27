@@ -10,9 +10,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostForm, apiPostJson, apiPut, ApiError } from "../api/client";
+import { AppHeader } from "../components/AppHeader";
 
 type Direction = "DEBIT" | "CREDIT";
 type PaymentMethod = "CASH" | "CARD" | "UNKNOWN";
@@ -75,7 +75,7 @@ interface TransactionEditForm {
   paymentMethod: PaymentMethod;
 }
 
-const ACCENT = "#aa3bff";
+const ACCENT = "#12503a"; // --forest, kept as a literal hex since recharts props take real colours, not CSS vars
 const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "CARD", "UNKNOWN"];
 const EMPTY_EDIT_FORM: TransactionEditForm = {
   date: "",
@@ -98,7 +98,7 @@ const editFormFrom = (t: Transaction): TransactionEditForm => ({
 });
 
 export function Dashboard() {
-  const { token, email, displayName, logout } = useAuth();
+  const { token } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [insights, setInsights] = useState<RecommendationsResponse | null>(null);
@@ -366,28 +366,30 @@ export function Dashboard() {
     }
   };
 
+  // The backend reports progress as a percentage baked into uploadProgress's text (see
+  // pollUntilSettled) - pulled back out here only to drive the visual bar, never re-derived.
+  const uploadPercentMatch = uploadProgress?.match(/(\d+)%/);
+  const uploadPercent = uploadPercentMatch ? Number(uploadPercentMatch[1]) : null;
+
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>FinMe</h1>
-        <div>
-          <Link to="/calendar">Calendar</Link>
-          <Link to="/budgets">Budgets</Link>
-          <Link to="/credit">Credit</Link>
-          {/* Falls back to email only for an account that predates this field, or a stored
-              session from before this change - registration and Google login both set it now. */}
-          <span>{displayName || email}</span>
-          <button type="button" onClick={logout}>
-            Log out
-          </button>
-        </div>
-      </header>
+    <div className="page">
+      <AppHeader active="dashboard" />
 
       <section className="upload-section">
-        <label className="upload-button">
-          {uploading ? uploadProgress ?? "Uploading..." : "Upload bank statement (PDF)"}
-          <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
-        </label>
+        <div>
+          <label className="upload-button">
+            {uploading ? uploadProgress ?? "Uploading..." : "Upload bank statement (PDF)"}
+            <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
+          </label>
+          {uploading && (
+            <div className="upload-progress-track">
+              <div
+                className="upload-progress-fill"
+                style={{ width: uploadPercent !== null ? `${uploadPercent}%` : "12%" }}
+              />
+            </div>
+          )}
+        </div>
         <label className="upload-button">
           {uploadingReceipt ? "Uploading..." : "Upload receipt (photo)"}
           <input
@@ -441,9 +443,9 @@ export function Dashboard() {
               <h2>Spend by category</h2>
               <ResponsiveContainer width="100%" height={Math.max(120, summary.categoryBreakdown.length * 40)}>
                 <BarChart data={summary.categoryBreakdown} layout="vertical" margin={{ left: 24 }}>
-                  <CartesianGrid horizontal={false} stroke="var(--border)" />
-                  <XAxis type="number" tickFormatter={(v: number) => `R${v}`} stroke="var(--text)" fontSize={12} />
-                  <YAxis type="category" dataKey="category" stroke="var(--text)" fontSize={12} width={100} />
+                  <CartesianGrid horizontal={false} stroke="var(--line)" />
+                  <XAxis type="number" tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
+                  <YAxis type="category" dataKey="category" stroke="var(--ink-50)" fontSize={12} width={100} />
                   <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]} />
                   <Bar dataKey="amount" fill={ACCENT} barSize={20} radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -456,9 +458,9 @@ export function Dashboard() {
               <h2>Spend trend</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={summary.trend}>
-                  <CartesianGrid vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="month" stroke="var(--text)" fontSize={12} />
-                  <YAxis tickFormatter={(v: number) => `R${v}`} stroke="var(--text)" fontSize={12} />
+                  <CartesianGrid vertical={false} stroke="var(--line)" />
+                  <XAxis dataKey="month" stroke="var(--ink-50)" fontSize={12} />
+                  <YAxis tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
                   <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]} />
                   <Line type="monotone" dataKey="amount" stroke={ACCENT} strokeWidth={2} dot={{ r: 4, fill: ACCENT }} />
                 </LineChart>
@@ -501,7 +503,7 @@ export function Dashboard() {
             <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} aria-label="From date" />
             <input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} aria-label="To date" />
             {hasActiveFilters && (
-              <button type="button" onClick={clearFilters}>
+              <button type="button" className="btn-quiet" onClick={clearFilters}>
                 Clear filters
               </button>
             )}
@@ -579,7 +581,7 @@ export function Dashboard() {
             <button type="submit" disabled={savingEdit}>
               {savingEdit ? "Saving..." : "Save changes"}
             </button>
-            <button type="button" onClick={cancelEdit} disabled={savingEdit}>
+            <button type="button" className="btn-quiet" onClick={cancelEdit} disabled={savingEdit}>
               Cancel
             </button>
           </form>
@@ -591,11 +593,24 @@ export function Dashboard() {
         </datalist>
 
         {loading ? (
-          <p>Loading...</p>
+          <div className="skeleton-list">
+            {[72, 88, 64, 80, 70].map((width, i) => (
+              <div className="skeleton-row" key={i}>
+                <span className="skeleton-bar" style={{ width: `${48 - i * 3}%` }} />
+                <span className="skeleton-bar" style={{ width: `${width}px`, flex: "0 0 auto" }} />
+              </div>
+            ))}
+          </div>
         ) : transactions.length === 0 ? (
-          <p>No transactions yet - upload a statement to get started.</p>
+          <div className="empty-state">
+            <h2>Nothing in your ledger yet.</h2>
+            <p>
+              Start with last month's bank statement - it fills a whole month in one go. Receipts
+              and cash entries slot in afterwards.
+            </p>
+          </div>
         ) : visibleTransactions.length === 0 ? (
-          <p>No transactions match these filters.</p>
+          <p className="recommendation-empty">No transactions match these filters.</p>
         ) : (
           <table className="transaction-table">
             <thead>
@@ -612,19 +627,21 @@ export function Dashboard() {
             <tbody>
               {pagedTransactions.map((t) => (
                 <tr key={t.id} className={editingId === t.id ? "editing-row" : undefined}>
-                  <td>{t.date}</td>
-                  <td>{t.merchant}</td>
-                  <td>{t.category ?? "-"}</td>
-                  <td>{t.description ?? "-"}</td>
-                  <td className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
+                  <td data-label="Date">{t.date}</td>
+                  <td data-label="Merchant">{t.merchant}</td>
+                  <td data-label="Category">{t.category ?? "-"}</td>
+                  <td data-label="Description">{t.description ?? "-"}</td>
+                  <td data-label="Amount" className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
                     {t.direction === "CREDIT" ? "+" : ""}R{t.amount.toFixed(2)}
                   </td>
-                  <td>{t.sourceType}</td>
-                  <td className="row-actions">
-                    <button type="button" onClick={() => startEdit(t)}>
+                  <td data-label="Source">
+                    <span className="tag">{t.sourceType}</span>
+                  </td>
+                  <td data-label="" className="row-actions">
+                    <button type="button" className="btn-quiet btn-small" onClick={() => startEdit(t)}>
                       Edit
                     </button>
-                    <button type="button" onClick={() => void deleteTransaction(t)}>
+                    <button type="button" className="btn-delete btn-small" onClick={() => void deleteTransaction(t)}>
                       Delete
                     </button>
                   </td>
@@ -638,6 +655,7 @@ export function Dashboard() {
           <div className="pager">
             <button
               type="button"
+              className="btn-quiet btn-small"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={pageInBounds <= 1}
             >
@@ -648,6 +666,7 @@ export function Dashboard() {
             </span>
             <button
               type="button"
+              className="btn-quiet btn-small"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={pageInBounds >= totalPages}
             >
