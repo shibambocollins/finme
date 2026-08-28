@@ -52,6 +52,13 @@ deliberately at implementation time, not guessed at here).
   FinMe — for blast-radius isolation, per-project usage visibility, and independent
   revocation. Costs nothing extra: quota is scoped per-account, not per-key, on Groq,
   OpenRouter, and Cloudflare.
+- **Email delivery (verification + weekly digest):** Brevo's free SMTP relay (300 emails/day,
+  free indefinitely, no card required) — a drop-in swap for Spring's `JavaMailSender`, no code
+  change beyond which four `spring.mail.*` values it points at. Second choice after Gmail SMTP
+  + an App Password, which worked in principle but repurposes a personal account for something
+  it wasn't built for. SendGrid was the original candidate before that; excluded because its
+  free tier is now gone entirely (as of May 2025), not merely the 60-day trial this doc
+  originally flagged it as.
 
 ## Explicitly excluded
 
@@ -72,8 +79,6 @@ deliberately at implementation time, not guessed at here).
   Cloudflare's routed models currently support vision input needs to be checked at
   implementation time — model support and pricing change, don't assume it matches whichever
   model handles text-based categorization.
-- **Email/notification delivery.** SendGrid (free tier, less setup) vs. plain SMTP via Java
-  Mail (no new dependency). Decide when building the notification iteration.
 - **Charting library (React).** Recharts or Chart.js both fit; not decided.
 - **Exact Azure compute service** (App Service vs. Container Apps vs. VM) beyond the F1→B1
   App Service path noted above.
