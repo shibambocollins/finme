@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 import { GoogleIcon } from "../components/GoogleIcon";
+import { PasswordInput } from "../components/PasswordInput";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
@@ -55,13 +56,7 @@ export function Login() {
           required
         />
         <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <PasswordInput id="password" value={password} onChange={setPassword} required />
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={submitting}>
           {submitting ? "Logging in..." : "Log in"}
