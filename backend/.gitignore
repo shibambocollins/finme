@@ -8,6 +8,10 @@ target/
 .env
 .env.local
 
+# Local dev H2 database file (see application-dev.properties) - real local financial test data,
+# never committed. Delete this directory any time you want a clean slate.
+data/
+
 ### STS ###
 .apt_generated
 .classpath
