@@ -245,6 +245,44 @@ class FeatureEndToEndHttpTest {
     }
 
     @Test
+    void updatesTheSignedInUsersDisplayNameThroughRealHttp() {
+        HttpHeaders headers = authHeaders();
+
+        ResponseEntity<Map> updated = rest.exchange(
+                url("/api/users/me"), HttpMethod.PUT,
+                new HttpEntity<>(Map.of("displayName", "  Renamed User  "), headers), Map.class);
+
+        assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updated.getBody().get("displayName")).isEqualTo("Renamed User");
+
+        // Not just an echo of the request body - confirms the row itself changed.
+        User reloaded = userRepository.findByEmail((String) updated.getBody().get("email")).orElseThrow();
+        assertThat(reloaded.getDisplayName()).isEqualTo("Renamed User");
+    }
+
+    @Test
+    void rejectsAnEmptyDisplayNameThroughRealValidation() {
+        HttpHeaders headers = authHeaders();
+
+        assertThatThrownBy(() -> rest.exchange(
+                url("/api/users/me"), HttpMethod.PUT,
+                new HttpEntity<>(Map.of("displayName", "   "), headers), Map.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void rejectsAProfileUpdateWithNoToken() {
+        assertThatThrownBy(() -> rest.exchange(
+                url("/api/users/me"), HttpMethod.PUT,
+                new HttpEntity<>(Map.of("displayName", "Someone")), Map.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.UNAUTHORIZED));
+    }
+
+    @Test
     void everyNewEndpointRejectsAMissingToken() {
         assertUnauthorized("/api/budgets");
         assertUnauthorized("/api/dashboard/calendar");
