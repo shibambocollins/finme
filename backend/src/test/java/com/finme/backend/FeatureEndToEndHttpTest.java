@@ -72,6 +72,25 @@ class FeatureEndToEndHttpTest {
         return "http://localhost:" + port + path;
     }
 
+    /** Same as authHeaders(), for the handful of tests that also need the email it minted -
+     *  confirming a destructive action means typing the account's own email back. */
+    private record AuthedUser(HttpHeaders headers, String email) {
+    }
+
+    private AuthedUser authHeadersWithEmail() {
+        User user = new User();
+        user.setEmail("e2e-" + System.nanoTime() + "@example.com");
+        user.setDisplayName("E2E Test User");
+        user.setEmailVerified(true);
+        user = userRepository.save(user);
+
+        String token = jwtService.issueToken(user.getId(), user.getEmail(), user.getDisplayName());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new AuthedUser(headers, user.getEmail());
+    }
+
     @Test
     void logsEditsSearchesAndDeletesATransactionThroughRealHttp() {
         HttpHeaders headers = authHeaders();
@@ -270,6 +289,78 @@ class FeatureEndToEndHttpTest {
                 .isInstanceOf(HttpClientErrorException.class)
                 .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void clearingFinancialDataRemovesTransactionsButKeepsTheAccountUsable() {
+        AuthedUser authed = authHeadersWithEmail();
+        HttpHeaders headers = authed.headers();
+        String email = authed.email();
+
+        rest.postForEntity(url("/api/transactions/manual"),
+                new HttpEntity<>(Map.of("text", "lunch"), headers), Map[].class);
+        assertThat(rest.exchange(url("/api/transactions"), HttpMethod.GET, new HttpEntity<>(headers), Map[].class)
+                .getBody()).hasSize(1);
+
+        ResponseEntity<Void> cleared = rest.exchange(
+                url("/api/users/me/data"), HttpMethod.DELETE,
+                new HttpEntity<>(Map.of("confirmationEmail", email), headers), Void.class);
+        assertThat(cleared.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // The account itself is untouched - still authorized, still has zero transactions.
+        assertThat(rest.exchange(url("/api/transactions"), HttpMethod.GET, new HttpEntity<>(headers), Map[].class)
+                .getBody()).isEmpty();
+    }
+
+    @Test
+    void clearingFinancialDataRejectsAMismatchedConfirmation() {
+        HttpHeaders headers = authHeaders();
+
+        assertThatThrownBy(() -> rest.exchange(
+                url("/api/users/me/data"), HttpMethod.DELETE,
+                new HttpEntity<>(Map.of("confirmationEmail", "not-my-email@example.com"), headers), Void.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void deletingTheAccountRemovesItsDataAndTheLoginItself() {
+        AuthedUser authed = authHeadersWithEmail();
+        HttpHeaders headers = authed.headers();
+        String email = authed.email();
+
+        rest.postForEntity(url("/api/transactions/manual"),
+                new HttpEntity<>(Map.of("text", "coffee"), headers), Map[].class);
+
+        ResponseEntity<Void> deleted = rest.exchange(
+                url("/api/users/me"), HttpMethod.DELETE,
+                new HttpEntity<>(Map.of("confirmationEmail", email), headers), Void.class);
+        assertThat(deleted.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        assertThat(userRepository.findByEmail(email)).isEmpty();
+    }
+
+    @Test
+    void deletingTheAccountRejectsAMismatchedConfirmation() {
+        HttpHeaders headers = authHeaders();
+
+        assertThatThrownBy(() -> rest.exchange(
+                url("/api/users/me"), HttpMethod.DELETE,
+                new HttpEntity<>(Map.of("confirmationEmail", "someone-else@example.com"), headers), Void.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.BAD_REQUEST));
+    }
+
+    @Test
+    void rejectsAccountDeletionWithNoToken() {
+        assertThatThrownBy(() -> rest.exchange(
+                url("/api/users/me"), HttpMethod.DELETE,
+                new HttpEntity<>(Map.of("confirmationEmail", "anyone@example.com")), Void.class))
+                .isInstanceOf(HttpClientErrorException.class)
+                .satisfies(ex -> assertThat(((HttpClientErrorException) ex).getStatusCode())
+                        .isEqualTo(HttpStatus.UNAUTHORIZED));
     }
 
     @Test

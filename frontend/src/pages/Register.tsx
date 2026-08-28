@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { apiPostJson, ApiError } from "../api/client";
 import { GoogleIcon } from "../components/GoogleIcon";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
@@ -10,6 +11,7 @@ interface MessageResponse {
 }
 
 export function Register() {
+  useDocumentTitle("Create your account — FinMe");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -73,9 +75,9 @@ export function Register() {
   return (
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <p className="auth-brand">
+        <Link to="/" className="auth-brand">
           Fin<span>Me</span>
-        </p>
+        </Link>
         <h1>Create your account</h1>
         <label htmlFor="displayName">Your name</label>
         <input

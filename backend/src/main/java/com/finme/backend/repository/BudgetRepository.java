@@ -17,4 +17,7 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
      * "groceries" cannot silently become two rows that both claim the same category.
      */
     Optional<Budget> findByUserIdAndCategoryIgnoreCase(Long userId, String category);
+
+    /** Bulk removal for "clear my data" / account deletion (UserService). */
+    void deleteByUserId(Long userId);
 }
