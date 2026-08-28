@@ -43,7 +43,7 @@ function monthLabel(month: string): string {
 }
 
 export function CalendarPage() {
-  useDocumentTitle("Calendar — FinMe");
+  useDocumentTitle("Calendar | FinMe");
   const { token } = useAuth();
   const [month, setMonth] = useState(currentMonth());
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);

@@ -15,7 +15,7 @@ import "./Legal.css";
  * practices, written the way a careful solo developer's policy should read at this stage.
  */
 export function Privacy() {
-  useDocumentTitle("Privacy Policy — FinMe");
+  useDocumentTitle("Privacy Policy | FinMe");
 
   return (
     <div className="legal-page">

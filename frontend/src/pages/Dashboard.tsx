@@ -110,7 +110,7 @@ const editFormFrom = (t: Transaction): TransactionEditForm => ({
 });
 
 export function Dashboard() {
-  useDocumentTitle("Dashboard — FinMe");
+  useDocumentTitle("Dashboard | FinMe");
   const { token } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);

@@ -78,7 +78,7 @@ const percent = (ratio: number | null) =>
 const EMPTY_ACCOUNT = { accountName: "", balance: "", creditLimit: "", paymentStatus: "UNKNOWN" as PaymentStatus };
 
 export function Credit() {
-  useDocumentTitle("Credit — FinMe");
+  useDocumentTitle("Credit | FinMe");
   const { token } = useAuth();
   const [profile, setProfile] = useState<CreditProfile | null>(null);
   const [loading, setLoading] = useState(true);
