@@ -10,6 +10,8 @@ import { CalendarPage } from "./pages/Calendar";
 import { AuthCallback } from "./pages/AuthCallback";
 import { Landing } from "./pages/Landing";
 import { Settings } from "./pages/Settings";
+import { NotFound } from "./pages/NotFound";
+import { CookieBanner } from "./components/CookieBanner";
 import "./App.css";
 
 /** The public marketing page at "/" for a logged-out visitor; a signed-in one goes straight to
@@ -67,7 +69,12 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Catch-all - must stay last. Anything that doesn't match a real route above (a typo,
+            a stale bookmark, a removed page) gets an explicit "not found" instead of a blank
+            screen. */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
+      <CookieBanner />
     </AuthProvider>
   );
 }
