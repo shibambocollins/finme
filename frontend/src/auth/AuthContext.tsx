@@ -13,6 +13,7 @@ interface AuthContextValue {
   displayName: string | null;
   login: (email: string, password: string) => Promise<void>;
   completeOAuthLogin: (token: string, email: string, displayName: string | null) => void;
+  updateDisplayName: (displayName: string) => void;
   logout: () => void;
 }
 
@@ -52,6 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     applyAuth({ token: oauthToken, email: oauthEmail, displayName: oauthDisplayName });
   };
 
+  // No new JWT to store here - PUT /api/users/me returns the updated profile directly, and
+  // nothing server-side reads the JWT's own displayName claim back (see UserService), so there
+  // is nothing stale to reconcile by re-issuing a token just for this.
+  const updateDisplayName = (newDisplayName: string) => {
+    setDisplayName(newDisplayName);
+    if (token && email) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ token, email, displayName: newDisplayName }));
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setEmail(null);
@@ -60,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const value = useMemo(
-    () => ({ token, email, displayName, login, completeOAuthLogin, logout }),
+    () => ({ token, email, displayName, login, completeOAuthLogin, updateDisplayName, logout }),
     [token, email, displayName],
   );
 

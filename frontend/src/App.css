@@ -1,3 +1,275 @@
+/* ============================================================
+   Layout
+   ============================================================ */
+
+.page {
+  flex: 1;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding-bottom: 18px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+/* ============================================================
+   Shared app header (Dashboard / Calendar / Budgets / Credit)
+   ============================================================ */
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding: 14px clamp(18px, 4vw, 40px);
+  background: rgba(251, 250, 247, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  color: var(--ink);
+}
+
+.app-header__brand span {
+  color: var(--forest);
+}
+
+.app-header__brand::after {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 4px;
+  background: var(--sage);
+  border-radius: 50%;
+}
+
+.app-header__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.app-header__nav a {
+  color: var(--ink-50);
+}
+
+.app-header__nav a:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.app-header__nav a.active {
+  color: var(--forest);
+}
+
+.app-header__profile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 20px;
+  color: var(--ink-60);
+}
+
+.app-header__profile:hover {
+  background: var(--stone);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.app-header__profile.active {
+  background: var(--forest-wash);
+  color: var(--forest);
+}
+
+.app-header__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-header__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.page--narrow {
+  max-width: 640px;
+}
+
+/* ============================================================
+   Buttons - primary is the default look; .btn-quiet and
+   .btn-delete override it. A hard offset shadow instead of a
+   soft glow; press moves the button onto its own shadow.
+   ============================================================ */
+
+button {
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 7px;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--forest-deep);
+  background: var(--forest);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 var(--forest-deep);
+  transition: transform 90ms ease, box-shadow 90ms ease, opacity 90ms ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translate(1.5px, 1.5px);
+  box-shadow: 1.5px 1.5px 0 var(--forest-deep);
+}
+
+button:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--forest-deep);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55;
+  transform: none;
+}
+
+.btn-quiet {
+  border: 1.5px solid var(--input-border);
+  background: transparent;
+  color: var(--ink-60);
+  box-shadow: none;
+}
+
+.btn-quiet:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-delete {
+  border: 1.5px solid var(--clay-input-border);
+  background: transparent;
+  color: var(--clay);
+  box-shadow: none;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: var(--clay-wash);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  justify-content: center;
+  border: 1.5px solid var(--input-border);
+  background: transparent;
+  color: var(--ink-60);
+  box-shadow: none;
+}
+
+.btn-icon:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ============================================================
+   Fields
+   ============================================================ */
+
+input,
+select,
+textarea {
+  padding: 10px 13px;
+  border: 1.5px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14.5px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgba(18, 80, 58, 0.14);
+}
+
+input::placeholder {
+  color: var(--ink-30);
+}
+
+/* A disabled field the user will never be able to edit here (email - this app signs in by
+   email, not a separate username) - visually distinct from a field that's just temporarily
+   disabled mid-save, so it doesn't need an explanatory caption underneath it. */
+.field-readonly {
+  background: var(--stone);
+  border-color: var(--line);
+  color: var(--ink-50);
+  cursor: not-allowed;
+}
+
+.field-readonly-inline {
+  font-size: 14.5px;
+  color: var(--ink-50);
+}
+
+/* ============================================================
+   Auth pages
+   ============================================================ */
+
 .auth-page {
   flex: 1;
   display: flex;
@@ -6,123 +278,176 @@
   padding: 24px;
 }
 
+.auth-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  margin-bottom: 22px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  color: var(--ink);
+}
+
+.auth-brand span {
+  color: var(--forest);
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   text-align: left;
 }
 
 .auth-form h1 {
-  font-size: 28px;
-  margin: 0 0 16px;
+  font-size: 27px;
+  margin: 0 0 18px;
 }
 
 .auth-form label {
-  font-size: 14px;
-  margin-top: 8px;
-}
-
-.auth-form input {
-  font: inherit;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--text-h);
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-top: 10px;
+  color: var(--ink);
 }
 
 .auth-form button {
-  font: inherit;
-  margin-top: 16px;
-  padding: 10px 12px;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  cursor: pointer;
-}
-
-.auth-form button:disabled {
-  opacity: 0.6;
-  cursor: default;
+  margin-top: 18px;
+  justify-content: center;
 }
 
 .form-error {
-  color: #e0245e;
-  font-size: 14px;
+  display: flex;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--clay-border);
+  border-left: 3px solid var(--clay);
+  border-radius: 6px;
+  background: var(--clay-wash);
+  color: var(--clay-deep);
+  font-size: 13.5px;
+  line-height: 1.5;
 }
 
+/* Google's own button guidelines call for a plain, undecorated treatment - no hard offset
+   shadow, no fill - so this is deliberately its own look rather than a variant of .btn-quiet.
+   Built standalone (not relying on the `button` element base) since this control is an <a>. */
 .oauth-button {
-  font: inherit;
-  margin-top: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px 18px;
+  border-radius: 7px;
+  border: 1.5px solid var(--input-border);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 600;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
+  transition: border-color 120ms ease, background 120ms ease;
 }
 
-.dashboard {
-  flex: 1;
-  padding: 24px 32px;
-  text-align: left;
-  max-width: 960px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
+.oauth-button:hover {
+  border-color: var(--ink-40);
+  background: var(--paper-alt);
+  color: var(--ink);
+  text-decoration: none;
 }
 
-.dashboard-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 16px;
-  margin-bottom: 24px;
+.oauth-button svg {
+  flex: 0 0 auto;
 }
 
-.dashboard-header h1 {
-  font-size: 28px;
-  margin: 0;
-}
-
-.dashboard-header div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.auth-form p {
+  margin-top: 14px;
   font-size: 14px;
+  color: var(--ink-50);
 }
 
-.dashboard-header button {
-  font: inherit;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text-h);
-  cursor: pointer;
-}
+/* ============================================================
+   Upload section
+   ============================================================ */
 
 .upload-section {
   margin-bottom: 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-start;
 }
 
 .upload-button {
-  display: inline-block;
-  font: inherit;
-  padding: 10px 16px;
-  border: 1px dashed var(--accent-border);
-  border-radius: 6px;
-  background: var(--accent-bg);
-  color: var(--text-h);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  border: 1.5px dashed var(--input-border);
+  border-radius: 7px;
+  background: var(--paper-alt);
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 600;
   cursor: pointer;
 }
+
+.upload-button:has(input:disabled) {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.upload-button::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--forest);
+}
+
+.upload-button:has(input:disabled)::before {
+  animation: finme-blink 1.1s steps(1) infinite;
+}
+
+.manual-entry {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.manual-entry input {
+  flex: 1;
+  min-width: 220px;
+}
+
+/* Docked progress surface for a long-running extraction - percentages come from the backend. */
+.upload-progress-track {
+  width: 100%;
+  max-width: 320px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--forest);
+  transition: width 220ms linear;
+}
+
+/* ============================================================
+   Stat tiles, cards, charts
+   ============================================================ */
 
 .summary-section {
   display: grid;
@@ -134,27 +459,35 @@
 .stat-tile {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  gap: 6px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
 }
 
 .stat-label {
-  font-size: 13px;
-  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-50);
 }
 
 .stat-value {
   font-size: 32px;
-  font-weight: 600;
-  color: var(--text-h);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
 }
 
 .chart-card {
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
 }
 
 .chart-card--wide {
@@ -163,191 +496,212 @@
 
 .chart-card h2 {
   font-size: 15px;
-  margin: 0 0 12px;
+  font-weight: 700;
+  margin: 0 0 14px;
 }
+
+/* ============================================================
+   Tables - desktop ledger, collapsing to stacked rows on
+   narrow screens via data-label. Filters sit above in one
+   wrapping row; the clear action only appears once set.
+   ============================================================ */
 
 .transaction-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 15px;
+  font-size: 14.5px;
 }
 
 .transaction-table th,
 .transaction-table td {
   text-align: left;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .transaction-table th {
-  color: var(--text);
+  color: var(--ink-50);
+  font-family: var(--font-mono);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  background: var(--stone);
 }
 
-/* Money in - a salary, deposit, or refund. Distinguished from spending in the transaction
-   table because the amount column alone cannot convey it (both are positive numbers). */
+.transaction-table tbody tr:hover {
+  background: var(--paper-alt);
+}
+
+.transaction-table td:last-child,
+.transaction-table th:last-child {
+  text-align: right;
+}
+
 .amount-credit {
-  color: #3ba55d;
+  color: var(--forest);
+  font-weight: 700;
 }
 
-/* AI-generated recommendations (FR-1.7.4). Narration of figures computed in code - never a
-   place to render a number the backend did not calculate. */
+.tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--stone);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-50);
+  white-space: nowrap;
+}
+
+.tag--on-time {
+  background: var(--forest-wash);
+  border-color: var(--forest-border);
+  color: var(--forest);
+}
+
+.tag--late,
+.tag--defaulted {
+  background: var(--clay-wash);
+  border-color: var(--clay-border);
+  color: var(--clay);
+}
+
+@media (max-width: 720px) {
+  .transaction-table thead {
+    display: none;
+  }
+  .transaction-table,
+  .transaction-table tbody,
+  .transaction-table tr,
+  .transaction-table td {
+    display: block;
+    width: 100%;
+  }
+  .transaction-table tr {
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .transaction-table td {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 5px 4px;
+    border-bottom: none;
+    text-align: right;
+  }
+  .transaction-table td::before {
+    content: attr(data-label);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-40);
+    text-align: left;
+  }
+  .transaction-table td:last-child,
+  .transaction-table th:last-child {
+    text-align: right;
+  }
+}
+
+/* ============================================================
+   Recommendations / plans
+   ============================================================ */
+
 .recommendation-list {
   margin: 0;
   padding-left: 20px;
   line-height: 1.6;
+  color: var(--ink-70);
 }
 
 .recommendation-list li {
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .recommendation-empty {
   margin: 0;
-  opacity: 0.7;
+  color: var(--ink-50);
   font-size: 14px;
 }
 
-/* Natural-language cash entry (FR-1.5.1) - the third way transactions get in, alongside
-   statement and receipt upload, for spending that leaves no other record. */
-.manual-entry {
+/* ============================================================
+   Credit disclaimer (FR-2.3.3) - a fixed block, always
+   rendered next to any plan or analysis. Never collapsed,
+   never smaller than body text.
+   ============================================================ */
+
+.credit-disclaimer {
   display: flex;
-  gap: 8px;
-  width: 100%;
-  margin-top: 12px;
-}
-
-.manual-entry input {
-  flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
+  gap: 13px;
+  margin: 18px 0 0;
+  padding: 15px 16px;
+  border: 1px solid var(--clay-border);
+  border-left: 4px solid var(--clay);
   border-radius: 6px;
-  background: transparent;
-  color: var(--text);
+  background: var(--clay-wash);
+  color: var(--clay-deep);
   font-size: 14px;
+  line-height: 1.5;
 }
 
-.manual-entry button {
-  padding: 10px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-}
+/* ============================================================
+   Forms that wrap rather than scroll: credit account entry,
+   the manual budget form, and the shared transaction filter /
+   inline-edit bars.
+   ============================================================ */
 
-.manual-entry button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Credit account entry (FR-2.1.2). Wraps rather than scrolls: these are four short fields and
-   a select, and on a narrow screen stacking them beats a horizontal scrollbar. */
-.credit-form {
+.credit-form,
+.filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
+  margin: 12px 0;
 }
 
-.credit-form input,
-.credit-form select {
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.credit-form input[type="text"] {
-  flex: 1 1 220px;
+.credit-form input[type="text"],
+.filter-bar input[type="text"] {
+  flex: 1 1 200px;
 }
 
 .credit-form input[type="number"] {
   flex: 0 1 150px;
 }
 
-.credit-form button {
-  padding: 10px 18px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.page-header a {
-  margin-right: 16px;
-}
-
-/* FR-2.3.3 requires this to be clearly visible, so it is given a border and full opacity
-   rather than the muted styling used for secondary notes elsewhere. It qualifies advice about
-   someone's money; it is not fine print. */
-.credit-disclaimer {
-  margin: 16px 0 0;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-left: 3px solid #e0a33b;
-  border-radius: 6px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* Transaction filter bar (Dashboard). Wraps rather than scrolls, matching the pattern already
-   used for the credit-account form. */
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin: 12px 0;
-}
-
-.filter-bar input,
-.filter-bar select {
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.filter-bar input[type="text"] {
-  flex: 1 1 200px;
-}
-
-.filter-bar button {
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* Inline transaction correction form - reuses .credit-form's layout, adds a highlight so it
-   reads as "editing something", not just another form on the page. */
 .transaction-edit-form {
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-left: 3px solid #aa3bff;
-  border-radius: 6px;
-  margin-bottom: 12px;
+  padding: 16px;
+  border: 1.5px solid var(--forest);
+  border-radius: 8px;
+  background: var(--paper-alt);
+  margin-bottom: 14px;
+  box-shadow: 3px 3px 0 var(--forest);
 }
 
 .editing-row {
-  outline: 1px solid #aa3bff;
+  outline: 1.5px solid var(--forest);
+  outline-offset: -1px;
 }
 
 .row-actions {
   white-space: nowrap;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
-.row-actions button {
-  padding: 4px 10px;
-  margin-right: 6px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 13px;
-}
+/* ============================================================
+   Budgets - context, not a cage. Clay only once a category is
+   genuinely over, and the real overage is shown, not R0 left.
+   ============================================================ */
 
-/* Budgets */
 .budget-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -358,68 +712,65 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  gap: 10px;
 }
 
 .budget-card-header h3 {
   margin: 0;
-}
-
-.budget-card-header button {
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
+  font-size: 18px;
 }
 
 .budget-progress-track {
   width: 100%;
-  height: 10px;
-  border-radius: 5px;
-  background: var(--border);
+  height: 14px;
+  border-radius: 2px;
+  background: var(--stone);
+  border: 1px solid var(--line);
   overflow: hidden;
 }
 
 .budget-progress-fill {
   height: 100%;
-  background: #aa3bff;
-  border-radius: 5px;
+  background: var(--forest);
 }
 
 .budget-card--over .budget-progress-fill {
-  background: #e0453b;
+  background: var(--clay);
 }
 
 .budget-figures {
-  margin: 8px 0 2px;
+  margin: 10px 0 2px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-50);
 }
 
 .budget-over-note {
   margin: 0;
-  color: #e0453b;
+  color: var(--clay);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-/* Calendar */
+/* ============================================================
+   Calendar - a zero-spend day is a real result, shown plainly,
+   not skipped. The bar carries intensity so it reads without
+   relying on colour alone.
+   ============================================================ */
+
 .calendar-nav {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 20px;
-  margin: 16px 0;
+  margin: 4px 0 20px;
 }
 
 .calendar-nav h2 {
   margin: 0;
-  min-width: 200px;
+  min-width: 220px;
   text-align: center;
-}
-
-.calendar-nav button {
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
 }
 
 .calendar-grid {
@@ -430,63 +781,115 @@
 
 .calendar-weekday {
   text-align: center;
-  font-size: 12px;
-  opacity: 0.7;
-  padding-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  padding-bottom: 6px;
 }
 
 .calendar-day {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 4px;
   aspect-ratio: 1;
   min-height: 60px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--card);
+  color: var(--ink);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.calendar-day:hover:not(:disabled) {
+  transform: none;
+  border-color: var(--forest-border);
 }
 
 .calendar-day--blank {
   border: none;
+  background: transparent;
   cursor: default;
+  visibility: hidden;
 }
 
 .calendar-day--selected {
-  outline: 2px solid #aa3bff;
+  border-color: var(--forest);
+  outline: 1.5px solid var(--forest);
+  outline-offset: -1px;
 }
 
 .calendar-day-number {
-  font-weight: 600;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .calendar-day-total {
+  font-family: var(--font-mono);
   font-size: 11px;
-  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-50);
 }
 
-/* Transaction list pager - windows the already-loaded, already-filtered list; see Dashboard.tsx
-   for why this stays client-side rather than becoming a second network round trip. */
+/* ============================================================
+   Pager
+   ============================================================ */
+
 .pager {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-top: 12px;
-  font-size: 13px;
+  margin-top: 16px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink-50);
 }
 
-.pager button {
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
+/* ============================================================
+   Loading skeleton and empty states - the skeleton takes the
+   shape of the ledger it's replacing, so the page doesn't
+   reflow when data lands.
+   ============================================================ */
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.pager button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--stone);
+}
+
+.skeleton-bar {
+  display: block;
+  height: 11px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--stone) 0%, var(--paper-alt) 50%, var(--stone) 100%);
+  background-size: 420px 100%;
+  animation: finme-shimmer 1.4s linear infinite;
+}
+
+.empty-state {
+  padding: 28px 0;
+  max-width: 46ch;
+}
+
+.empty-state p {
+  margin: 0 0 16px;
+  color: var(--ink-50);
+  font-size: 15px;
+  line-height: 1.55;
 }

@@ -10,9 +10,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostForm, apiPostJson, apiPut, ApiError } from "../api/client";
+import { AppHeader } from "../components/AppHeader";
+import { SUGGESTED_CATEGORIES } from "../constants/categories";
+import { downloadCsv } from "../utils/csv";
 
 type Direction = "DEBIT" | "CREDIT";
 type PaymentMethod = "CASH" | "CARD" | "UNKNOWN";
@@ -75,7 +77,7 @@ interface TransactionEditForm {
   paymentMethod: PaymentMethod;
 }
 
-const ACCENT = "#aa3bff";
+const ACCENT = "#12503a"; // --forest, kept as a literal hex since recharts props take real colours, not CSS vars
 const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "CARD", "UNKNOWN"];
 const EMPTY_EDIT_FORM: TransactionEditForm = {
   date: "",
@@ -98,7 +100,7 @@ const editFormFrom = (t: Transaction): TransactionEditForm => ({
 });
 
 export function Dashboard() {
-  const { token, email, displayName, logout } = useAuth();
+  const { token } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [insights, setInsights] = useState<RecommendationsResponse | null>(null);
@@ -154,6 +156,8 @@ export function Dashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  // Categories actually present in the data - drives the filter dropdown, where showing an
+  // unused category would just be a selectable option that always returns nothing.
   const categoryOptions = useMemo(
     () =>
       [...new Set(transactions.map((t) => t.category).filter((c): c is string => Boolean(c)))].sort((a, b) =>
@@ -161,6 +165,32 @@ export function Dashboard() {
       ),
     [transactions]
   );
+
+  // Seed list merged with whatever the user has actually used - drives the free-text category
+  // datalist, where the goal is good suggestions (including for a brand-new user with no
+  // transactions yet), not a restriction to what already exists.
+  const categorySuggestions = useMemo(
+    () => [...new Set([...SUGGESTED_CATEGORIES, ...categoryOptions])].sort((a, b) => a.localeCompare(b)),
+    [categoryOptions]
+  );
+
+  // Total-spend month-over-month only - the backend's category breakdown is all-time, not
+  // scoped per month, so a per-category comparison ("18% less on takeaways") would need a new
+  // aggregation query. This reads entirely from the trend series already fetched for the chart.
+  const spendComparison = useMemo(() => {
+    if (!summary || summary.trend.length < 2) return null;
+    const sorted = [...summary.trend].sort((a, b) => a.month.localeCompare(b.month));
+    const current = sorted[sorted.length - 1];
+    const previous = sorted[sorted.length - 2];
+    if (previous.amount === 0) return null;
+
+    const [year, month] = previous.month.split("-").map(Number);
+    const previousMonthLabel = new Date(year, month - 1, 1).toLocaleDateString(undefined, { month: "long" });
+    const percentChange = ((current.amount - previous.amount) / previous.amount) * 100;
+    const rounded = Math.round(Math.abs(percentChange));
+    if (rounded === 0) return `About the same as ${previousMonthLabel}`;
+    return `${rounded}% ${percentChange > 0 ? "more" : "less"} than ${previousMonthLabel}`;
+  }, [summary]);
 
   const visibleTransactions = useMemo(() => {
     const query = filterQuery.trim().toLowerCase();
@@ -188,6 +218,25 @@ export function Dashboard() {
     setFilterFrom("");
     setFilterTo("");
     setFilterQuery("");
+  };
+
+  // Exports whatever the filters currently show, not the whole account - "export what I'm
+  // looking at" matches how the filter bar already behaves everywhere else on this page.
+  const exportVisibleAsCsv = () => {
+    downloadCsv(
+      `finme-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Date", "Merchant", "Category", "Description", "Amount", "Direction", "Source", "Payment Method"],
+      visibleTransactions.map((t) => [
+        t.date,
+        t.merchant,
+        t.category ?? "",
+        t.description ?? "",
+        t.amount.toFixed(2),
+        t.direction,
+        t.sourceType,
+        t.paymentMethod,
+      ])
+    );
   };
 
   // Windowing the already-loaded list, not a second network request. The whole list is fetched
@@ -366,28 +415,30 @@ export function Dashboard() {
     }
   };
 
+  // The backend reports progress as a percentage baked into uploadProgress's text (see
+  // pollUntilSettled) - pulled back out here only to drive the visual bar, never re-derived.
+  const uploadPercentMatch = uploadProgress?.match(/(\d+)%/);
+  const uploadPercent = uploadPercentMatch ? Number(uploadPercentMatch[1]) : null;
+
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>FinMe</h1>
-        <div>
-          <Link to="/calendar">Calendar</Link>
-          <Link to="/budgets">Budgets</Link>
-          <Link to="/credit">Credit</Link>
-          {/* Falls back to email only for an account that predates this field, or a stored
-              session from before this change - registration and Google login both set it now. */}
-          <span>{displayName || email}</span>
-          <button type="button" onClick={logout}>
-            Log out
-          </button>
-        </div>
-      </header>
+    <div className="page">
+      <AppHeader active="dashboard" />
 
       <section className="upload-section">
-        <label className="upload-button">
-          {uploading ? uploadProgress ?? "Uploading..." : "Upload bank statement (PDF)"}
-          <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
-        </label>
+        <div>
+          <label className="upload-button">
+            {uploading ? uploadProgress ?? "Uploading..." : "Upload bank statement (PDF)"}
+            <input type="file" accept="application/pdf" onChange={handleFileChange} disabled={uploading} hidden />
+          </label>
+          {uploading && (
+            <div className="upload-progress-track">
+              <div
+                className="upload-progress-fill"
+                style={{ width: uploadPercent !== null ? `${uploadPercent}%` : "12%" }}
+              />
+            </div>
+          )}
+        </div>
         <label className="upload-button">
           {uploadingReceipt ? "Uploading..." : "Upload receipt (photo)"}
           <input
@@ -419,6 +470,7 @@ export function Dashboard() {
           <div className="stat-tile">
             <span className="stat-label">Total spend</span>
             <span className="stat-value">R{summary.totalSpend.toFixed(2)}</span>
+            {spendComparison && <span className="stat-label">{spendComparison}</span>}
           </div>
 
           {insights && (insights.recommendations.length > 0 || insights.unavailableReason) && (
@@ -441,9 +493,9 @@ export function Dashboard() {
               <h2>Spend by category</h2>
               <ResponsiveContainer width="100%" height={Math.max(120, summary.categoryBreakdown.length * 40)}>
                 <BarChart data={summary.categoryBreakdown} layout="vertical" margin={{ left: 24 }}>
-                  <CartesianGrid horizontal={false} stroke="var(--border)" />
-                  <XAxis type="number" tickFormatter={(v: number) => `R${v}`} stroke="var(--text)" fontSize={12} />
-                  <YAxis type="category" dataKey="category" stroke="var(--text)" fontSize={12} width={100} />
+                  <CartesianGrid horizontal={false} stroke="var(--line)" />
+                  <XAxis type="number" tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
+                  <YAxis type="category" dataKey="category" stroke="var(--ink-50)" fontSize={12} width={100} />
                   <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]} />
                   <Bar dataKey="amount" fill={ACCENT} barSize={20} radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -456,9 +508,9 @@ export function Dashboard() {
               <h2>Spend trend</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={summary.trend}>
-                  <CartesianGrid vertical={false} stroke="var(--border)" />
-                  <XAxis dataKey="month" stroke="var(--text)" fontSize={12} />
-                  <YAxis tickFormatter={(v: number) => `R${v}`} stroke="var(--text)" fontSize={12} />
+                  <CartesianGrid vertical={false} stroke="var(--line)" />
+                  <XAxis dataKey="month" stroke="var(--ink-50)" fontSize={12} />
+                  <YAxis tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
                   <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]} />
                   <Line type="monotone" dataKey="amount" stroke={ACCENT} strokeWidth={2} dot={{ r: 4, fill: ACCENT }} />
                 </LineChart>
@@ -501,10 +553,13 @@ export function Dashboard() {
             <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} aria-label="From date" />
             <input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} aria-label="To date" />
             {hasActiveFilters && (
-              <button type="button" onClick={clearFilters}>
+              <button type="button" className="btn-quiet" onClick={clearFilters}>
                 Clear filters
               </button>
             )}
+            <button type="button" className="btn-quiet" onClick={exportVisibleAsCsv} disabled={visibleTransactions.length === 0}>
+              Export CSV
+            </button>
           </div>
         )}
 
@@ -579,23 +634,36 @@ export function Dashboard() {
             <button type="submit" disabled={savingEdit}>
               {savingEdit ? "Saving..." : "Save changes"}
             </button>
-            <button type="button" onClick={cancelEdit} disabled={savingEdit}>
+            <button type="button" className="btn-quiet" onClick={cancelEdit} disabled={savingEdit}>
               Cancel
             </button>
           </form>
         )}
         <datalist id="category-suggestions">
-          {categoryOptions.map((c) => (
+          {categorySuggestions.map((c) => (
             <option key={c} value={c} />
           ))}
         </datalist>
 
         {loading ? (
-          <p>Loading...</p>
+          <div className="skeleton-list">
+            {[72, 88, 64, 80, 70].map((width, i) => (
+              <div className="skeleton-row" key={i}>
+                <span className="skeleton-bar" style={{ width: `${48 - i * 3}%` }} />
+                <span className="skeleton-bar" style={{ width: `${width}px`, flex: "0 0 auto" }} />
+              </div>
+            ))}
+          </div>
         ) : transactions.length === 0 ? (
-          <p>No transactions yet - upload a statement to get started.</p>
+          <div className="empty-state">
+            <h2>Nothing in your ledger yet.</h2>
+            <p>
+              Start with last month's bank statement - it fills a whole month in one go. Receipts
+              and cash entries slot in afterwards.
+            </p>
+          </div>
         ) : visibleTransactions.length === 0 ? (
-          <p>No transactions match these filters.</p>
+          <p className="recommendation-empty">No transactions match these filters.</p>
         ) : (
           <table className="transaction-table">
             <thead>
@@ -612,19 +680,21 @@ export function Dashboard() {
             <tbody>
               {pagedTransactions.map((t) => (
                 <tr key={t.id} className={editingId === t.id ? "editing-row" : undefined}>
-                  <td>{t.date}</td>
-                  <td>{t.merchant}</td>
-                  <td>{t.category ?? "-"}</td>
-                  <td>{t.description ?? "-"}</td>
-                  <td className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
+                  <td data-label="Date">{t.date}</td>
+                  <td data-label="Merchant">{t.merchant}</td>
+                  <td data-label="Category">{t.category ?? "-"}</td>
+                  <td data-label="Description">{t.description ?? "-"}</td>
+                  <td data-label="Amount" className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
                     {t.direction === "CREDIT" ? "+" : ""}R{t.amount.toFixed(2)}
                   </td>
-                  <td>{t.sourceType}</td>
-                  <td className="row-actions">
-                    <button type="button" onClick={() => startEdit(t)}>
+                  <td data-label="Source">
+                    <span className="tag">{t.sourceType}</span>
+                  </td>
+                  <td data-label="" className="row-actions">
+                    <button type="button" className="btn-quiet btn-small" onClick={() => startEdit(t)}>
                       Edit
                     </button>
-                    <button type="button" onClick={() => void deleteTransaction(t)}>
+                    <button type="button" className="btn-delete btn-small" onClick={() => void deleteTransaction(t)}>
                       Delete
                     </button>
                   </td>
@@ -638,6 +708,7 @@ export function Dashboard() {
           <div className="pager">
             <button
               type="button"
+              className="btn-quiet btn-small"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={pageInBounds <= 1}
             >
@@ -648,6 +719,7 @@ export function Dashboard() {
             </span>
             <button
               type="button"
+              className="btn-quiet btn-small"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={pageInBounds >= totalPages}
             >

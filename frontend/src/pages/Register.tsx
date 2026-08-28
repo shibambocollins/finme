@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { apiPostJson, ApiError } from "../api/client";
+import { GoogleIcon } from "../components/GoogleIcon";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
@@ -72,7 +73,10 @@ export function Register() {
   return (
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h1>Create your FinMe account</h1>
+        <p className="auth-brand">
+          Fin<span>Me</span>
+        </p>
+        <h1>Create your account</h1>
         <label htmlFor="displayName">Your name</label>
         <input
           id="displayName"
@@ -104,6 +108,7 @@ export function Register() {
           {submitting ? "Creating account..." : "Register"}
         </button>
         <a className="oauth-button" href={`${API_BASE_URL}/oauth2/authorization/google`}>
+          <GoogleIcon />
           Continue with Google
         </a>
         <p>

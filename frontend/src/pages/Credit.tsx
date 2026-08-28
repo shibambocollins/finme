@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostJson, apiPut, ApiError } from "../api/client";
+import { AppHeader } from "../components/AppHeader";
 
 type PaymentStatus = "ON_TIME" | "LATE" | "DEFAULTED" | "UNKNOWN";
 
@@ -63,6 +63,13 @@ interface ScoreComparison {
 }
 
 const PAYMENT_STATUSES: PaymentStatus[] = ["ON_TIME", "LATE", "DEFAULTED", "UNKNOWN"];
+
+const PAYMENT_STATUS_TAG_CLASS: Record<PaymentStatus, string> = {
+  ON_TIME: "tag tag--on-time",
+  LATE: "tag tag--late",
+  DEFAULTED: "tag tag--defaulted",
+  UNKNOWN: "tag",
+};
 
 const percent = (ratio: number | null) =>
   ratio === null ? "n/a" : `${(ratio * 100).toFixed(1)}%`;
@@ -220,24 +227,30 @@ export function Credit() {
   };
 
   return (
-    <main className="page">
-      <header className="page-header">
+    <>
+      <AppHeader active="credit" />
+      <main className="page">
         <h1>Credit</h1>
-        <Link to="/dashboard">Back to dashboard</Link>
-      </header>
 
       {error && <p className="form-error">{error}</p>}
 
       {loading ? (
-        <p>Loading...</p>
+        <div className="skeleton-list">
+          {[68, 76, 60].map((width, i) => (
+            <div className="skeleton-row" key={i}>
+              <span className="skeleton-bar" style={{ width: "44%" }} />
+              <span className="skeleton-bar" style={{ width: `${width}px`, flex: "0 0 auto" }} />
+            </div>
+          ))}
+        </div>
       ) : !profile ? (
         <section className="chart-card">
           <h2>Track your credit position</h2>
-          <p>
+          <p className="recommendation-empty">
             Add your credit accounts and score to see where you stand. This is optional - your
             spending dashboard works without it.
           </p>
-          <button type="button" onClick={() => void createProfile()} disabled={busy}>
+          <button type="button" style={{ marginTop: 16 }} onClick={() => void createProfile()} disabled={busy}>
             {busy ? "Creating..." : "Create credit profile"}
           </button>
         </section>
@@ -329,7 +342,7 @@ export function Credit() {
                 {editingId ? "Save changes" : "Add account"}
               </button>
               {editingId && (
-                <button type="button" onClick={cancelEdit} disabled={busy}>
+                <button type="button" className="btn-quiet" onClick={cancelEdit} disabled={busy}>
                   Cancel
                 </button>
               )}
@@ -362,9 +375,9 @@ export function Credit() {
                   <tbody>
                     {analysis.accounts.map((a) => (
                       <tr key={a.accountId}>
-                        <td>{a.accountName}</td>
-                        <td>{percent(a.utilization)}</td>
-                        <td>{percent(a.overallReduction)}</td>
+                        <td data-label="Account">{a.accountName}</td>
+                        <td data-label="Its own utilization">{percent(a.utilization)}</td>
+                        <td data-label="Clearing it lowers overall by">{percent(a.overallReduction)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -447,7 +460,9 @@ export function Credit() {
           <section>
             <h2>Your credit accounts</h2>
             {profile.accounts.length === 0 ? (
-              <p>No accounts yet - add one above.</p>
+              <div className="empty-state">
+                <p>No accounts yet - add one above.</p>
+              </div>
             ) : (
               <table className="transaction-table">
                 <thead>
@@ -462,15 +477,19 @@ export function Credit() {
                 <tbody>
                   {profile.accounts.map((account) => (
                     <tr key={account.id}>
-                      <td>{account.accountName}</td>
-                      <td>R{account.balance.toFixed(2)}</td>
-                      <td>R{account.creditLimit.toFixed(2)}</td>
-                      <td>{account.paymentStatus.replace("_", " ").toLowerCase()}</td>
-                      <td>
-                        <button type="button" onClick={() => editAccount(account)} disabled={busy}>
+                      <td data-label="Account">{account.accountName}</td>
+                      <td data-label="Balance">R{account.balance.toFixed(2)}</td>
+                      <td data-label="Limit">R{account.creditLimit.toFixed(2)}</td>
+                      <td data-label="Payments">
+                        <span className={PAYMENT_STATUS_TAG_CLASS[account.paymentStatus]}>
+                          {account.paymentStatus.replace("_", " ").toLowerCase()}
+                        </span>
+                      </td>
+                      <td data-label="" className="row-actions">
+                        <button type="button" className="btn-quiet btn-small" onClick={() => editAccount(account)} disabled={busy}>
                           Edit
-                        </button>{" "}
-                        <button type="button" onClick={() => void removeAccount(account.id)} disabled={busy}>
+                        </button>
+                        <button type="button" className="btn-delete btn-small" onClick={() => void removeAccount(account.id)} disabled={busy}>
                           Remove
                         </button>
                       </td>
@@ -487,6 +506,7 @@ export function Credit() {
           </section>
         </>
       )}
-    </main>
+      </main>
+    </>
   );
 }

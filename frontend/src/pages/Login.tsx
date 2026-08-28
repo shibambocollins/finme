@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
+import { GoogleIcon } from "../components/GoogleIcon";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
@@ -39,7 +40,10 @@ export function Login() {
   return (
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h1>Log in to FinMe</h1>
+        <p className="auth-brand">
+          Fin<span>Me</span>
+        </p>
+        <h1>Log in</h1>
         <label htmlFor="email">Email</label>
         <input
           id="email"
@@ -61,6 +65,7 @@ export function Login() {
           {submitting ? "Logging in..." : "Log in"}
         </button>
         <a className="oauth-button" href={`${API_BASE_URL}/oauth2/authorization/google`}>
+          <GoogleIcon />
           Continue with Google
         </a>
         <p>
