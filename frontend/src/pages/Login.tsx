@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { ApiError } from "../api/client";
 import { GoogleIcon } from "../components/GoogleIcon";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
 
@@ -13,6 +14,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export function Login() {
+  useDocumentTitle("Log in — FinMe");
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -40,9 +42,9 @@ export function Login() {
   return (
     <div className="auth-page">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <p className="auth-brand">
+        <Link to="/" className="auth-brand">
           Fin<span>Me</span>
-        </p>
+        </Link>
         <h1>Log in</h1>
         <label htmlFor="email">Email</label>
         <input
