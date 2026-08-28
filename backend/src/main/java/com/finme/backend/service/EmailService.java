@@ -6,9 +6,13 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 /**
- * Thin wrapper around JavaMailSender (auto-configured once spring.mail.* is set - Gmail SMTP
- * + an App Password, see docs/07-tech-stack.md). Plain text throughout - at two message types
- * there is still no reason for templating machinery.
+ * Thin wrapper around JavaMailSender (auto-configured once spring.mail.* is set - Brevo's SMTP
+ * relay, see docs/07-tech-stack.md). Plain text throughout - at two message types there is
+ * still no reason for templating machinery.
+ * <p>
+ * fromAddress reads app.mail.from-address, deliberately not spring.mail.username: the latter is
+ * the SMTP login credential, and a provider's verified "From:" sender is not guaranteed to be
+ * the same value - conflating them worked by coincidence with Gmail, where they usually are.
  */
 @Service
 public class EmailService {
@@ -19,7 +23,7 @@ public class EmailService {
 
     public EmailService(
             JavaMailSender mailSender,
-            @Value("${spring.mail.username}") String fromAddress,
+            @Value("${app.mail.from-address}") String fromAddress,
             @Value("${app.backend-base-url}") String backendBaseUrl) {
         this.mailSender = mailSender;
         this.fromAddress = fromAddress;
