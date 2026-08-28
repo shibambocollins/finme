@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { apiPostJson, ApiError } from "../api/client";
 import { GoogleIcon } from "../components/GoogleIcon";
+import { PasswordInput } from "../components/PasswordInput";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string;
@@ -97,13 +98,13 @@ export function Register() {
           required
         />
         <label htmlFor="password">Password</label>
-        <input
+        <PasswordInput
           id="password"
-          type="password"
-          minLength={8}
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={setPassword}
+          minLength={8}
           required
+          autoComplete="new-password"
         />
         {error && <p className="form-error">{error}</p>}
         <button type="submit" disabled={submitting}>
