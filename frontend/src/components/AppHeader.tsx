@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-type ActivePage = "dashboard" | "calendar" | "budgets" | "credit";
+type ActivePage = "dashboard" | "calendar" | "budgets" | "credit" | "settings";
 
 const NAV_ITEMS: { to: string; label: string; key: ActivePage }[] = [
   { to: "/dashboard", label: "Dashboard", key: "dashboard" },
@@ -17,7 +17,10 @@ const NAV_ITEMS: { to: string; label: string; key: ActivePage }[] = [
  * other and keeps the identity/logout affordance in the same place everywhere.
  */
 export function AppHeader({ active }: { active: ActivePage }) {
-  const { email, displayName, logout } = useAuth();
+  const { email, displayName } = useAuth();
+  // Falls back to email only for an account that predates displayName, or a stored session from
+  // before that field existed - registration and Google login both set it now.
+  const name = displayName || email || "";
 
   return (
     <header className="app-header">
@@ -31,15 +34,12 @@ export function AppHeader({ active }: { active: ActivePage }) {
           </Link>
         ))}
       </nav>
-      <div className="app-header__user">
-        {/* Falls back to email only for an account that predates displayName, or a stored
-            session from before that field existed - registration and Google login both set it
-            now. */}
-        <span className="app-header__name">{displayName || email}</span>
-        <button type="button" className="btn-quiet btn-small" onClick={logout}>
-          Log out
-        </button>
-      </div>
+      {/* Logout lives on the Settings page now, alongside other account actions, rather than
+          sitting in the header as the one thing you could do with your identity. */}
+      <Link to="/settings" className={`app-header__profile${active === "settings" ? " active" : ""}`}>
+        <span className="app-header__avatar">{name.charAt(0).toUpperCase()}</span>
+        <span className="app-header__name">{name}</span>
+      </Link>
     </header>
   );
 }

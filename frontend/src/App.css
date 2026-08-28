@@ -92,16 +92,47 @@
   color: var(--forest);
 }
 
-.app-header__user {
+.app-header__profile {
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-size: 14px;
+  gap: 9px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 20px;
+  color: var(--ink-60);
+}
+
+.app-header__profile:hover {
+  background: var(--stone);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.app-header__profile.active {
+  background: var(--forest-wash);
+  color: var(--forest);
+}
+
+.app-header__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--forest);
+  color: var(--paper);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .app-header__name {
-  color: var(--ink-60);
+  font-size: 14px;
   font-weight: 600;
+}
+
+.page--narrow {
+  max-width: 640px;
 }
 
 /* ============================================================
@@ -218,6 +249,21 @@ textarea:focus-visible {
 
 input::placeholder {
   color: var(--ink-30);
+}
+
+/* A disabled field the user will never be able to edit here (email - this app signs in by
+   email, not a separate username) - visually distinct from a field that's just temporarily
+   disabled mid-save, so it doesn't need an explanatory caption underneath it. */
+.field-readonly {
+  background: var(--stone);
+  border-color: var(--line);
+  color: var(--ink-50);
+  cursor: not-allowed;
+}
+
+.field-readonly-inline {
+  font-size: 14.5px;
+  color: var(--ink-50);
 }
 
 /* ============================================================
