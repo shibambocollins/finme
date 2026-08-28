@@ -53,14 +53,17 @@ public class AuthController {
     /**
      * Reached by the browser clicking the link in the verification email, not an API call the
      * SPA makes directly - redirects rather than returning JSON, same pattern as the OAuth2
-     * login handlers, and lands on the same /auth-callback page they use.
+     * login handlers, and lands on the same /auth-callback page they use. The extra
+     * "&verified=true" is the one thing that redirect doesn't carry - it's how AuthCallback
+     * tells this apart from a plain OAuth login and shows a real "verified" confirmation
+     * instead of silently continuing straight to the dashboard.
      */
     @GetMapping("/verify-email")
     public void verifyEmail(@RequestParam String token, HttpServletResponse response) throws IOException {
         try {
             AuthResponse auth = authService.verifyEmail(token);
             String encodedToken = URLEncoder.encode(auth.token(), StandardCharsets.UTF_8);
-            response.sendRedirect(frontendRedirectUri + "?token=" + encodedToken);
+            response.sendRedirect(frontendRedirectUri + "?token=" + encodedToken + "&verified=true");
         } catch (InvalidVerificationTokenException ex) {
             response.sendRedirect(frontendLoginUri + "?error=verification");
         }
