@@ -432,11 +432,25 @@ input::placeholder {
    ============================================================ */
 
 .auth-page {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+
+.auth-page__back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-50);
+}
+
+.auth-page__back:hover {
+  color: var(--ink);
 }
 
 .auth-brand {
