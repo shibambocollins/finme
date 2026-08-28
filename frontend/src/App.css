@@ -432,11 +432,25 @@ input::placeholder {
    ============================================================ */
 
 .auth-page {
+  position: relative;
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+
+.auth-page__back {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-50);
+}
+
+.auth-page__back:hover {
+  color: var(--ink);
 }
 
 .auth-brand {
@@ -531,22 +545,40 @@ input::placeholder {
   flex: 0 0 auto;
 }
 
+/* An input group, not an input with a button floated on top of it - the border, background and
+   focus ring all live on this wrapper, and the <input> inside is borderless/transparent, so the
+   toggle sits as a normal flex child genuinely inside the same field, not overlaid on it. */
 .password-field {
-  position: relative;
+  display: flex;
+  align-items: center;
   width: 100%;
+  border: 1.5px solid var(--input-border);
+  border-radius: 7px;
+  background: var(--card);
+}
+
+.password-field:focus-within {
+  border-color: var(--forest);
+  box-shadow: 0 0 0 3px rgba(18, 80, 58, 0.14);
 }
 
 .password-field input {
-  width: 100%;
-  padding-right: 62px;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  border: none;
+  background: transparent;
+}
+
+.password-field input:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .password-field__toggle {
-  position: absolute;
-  top: 50%;
-  right: 5px;
-  transform: translateY(-50%);
-  padding: 5px 10px;
+  flex: 0 0 auto;
+  margin-right: 4px;
+  padding: 6px 10px;
   border: none;
   background: transparent;
   box-shadow: none;
@@ -556,7 +588,7 @@ input::placeholder {
 }
 
 .password-field__toggle:hover:not(:disabled) {
-  transform: translateY(-50%);
+  transform: none;
   box-shadow: none;
   color: var(--ink);
 }

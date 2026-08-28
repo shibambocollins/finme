@@ -42,6 +42,9 @@ export function Login() {
 
   return (
     <div className="auth-page">
+      <Link to="/" className="auth-page__back">
+        &larr; Back to FinMe
+      </Link>
       <form className="auth-form" onSubmit={handleSubmit}>
         <Link to="/" className="auth-brand">
           Fin<span>Me</span>

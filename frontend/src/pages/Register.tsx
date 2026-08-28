@@ -55,8 +55,11 @@ export function Register() {
   if (registeredEmail) {
     return (
       <div className="auth-page">
+        <Link to="/" className="auth-page__back">
+          &larr; Back to FinMe
+        </Link>
         <div className="auth-form">
-          <h1>Check your email</h1>
+          <h1>Welcome to FinMe!</h1>
           <p>
             We sent a verification link to <strong>{registeredEmail}</strong>. Click it to
             activate your account before logging in.
@@ -75,6 +78,9 @@ export function Register() {
 
   return (
     <div className="auth-page">
+      <Link to="/" className="auth-page__back">
+        &larr; Back to FinMe
+      </Link>
       <form className="auth-form" onSubmit={handleSubmit}>
         <Link to="/" className="auth-brand">
           Fin<span>Me</span>
