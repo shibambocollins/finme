@@ -113,8 +113,30 @@ const FAQS = [
     a: "No. FinMe doesn't hold money, move money or make payments. It reads records of spending you give it and organises them.",
   },
   {
+    q: "Is FinMe affiliated with my bank or any financial institution?",
+    a: "No. FinMe isn't affiliated with, endorsed by, or connected to any bank, credit bureau, or other financial institution. It's an independent personal project - your bank has no knowledge of it, and it has no relationship with your bank beyond reading the statement you choose to upload.",
+  },
+  {
+    q: "Do I need a credit card to use FinMe?",
+    a: "No. FinMe never asks for a card or payment number anywhere in the app - there's nothing to enter. It's completely free while in development.",
+  },
+  {
     q: "What happens to a statement I upload?",
-    a: "It's parsed to pull out transactions. Account numbers, ID numbers and names are removed from the text before any of it reaches an external model. Exact retention and deletion timelines are still being finalised.",
+    a: (
+      <>
+        It's parsed to pull out transactions. Account numbers, ID numbers and names are removed
+        from the text before any of it reaches an external model - see the{" "}
+        <Link to="/privacy">Privacy Policy</Link> for the full detail on storage and retention.
+      </>
+    ),
+  },
+  {
+    q: "Is my data used to train any AI model?",
+    a: "No. The providers used to read and categorise your statements (Groq, OpenRouter, Cloudflare Workers AI) are configured for zero or minimal data retention and don't train their models on submitted content. FinMe never routes real financial data through a provider whose free tier permits training on what's submitted.",
+  },
+  {
+    q: "Does FinMe sell or share my data?",
+    a: "No. FinMe doesn't sell, rent, or share your data with advertisers or data brokers. The only outside parties involved at all are the AI providers used to read a statement or receipt, and Google's own login flow if you choose to sign in that way - neither is used for marketing, and neither gets more than the specific data needed to do that one job.",
   },
   {
     q: "What files can I upload?",
@@ -136,6 +158,21 @@ const FAQS = [
     q: "How should I read the improvement plan?",
     a: "As suggestions ordered by their effect on your utilisation, written from figures FinMe calculated. Following them does not guarantee an increase in your score.",
   },
+  {
+    q: "Can I delete my data, or my account?",
+    a: "Yes, either one, any time - from Settings. “Clear my data” removes every transaction, statement, receipt, budget and credit profile but keeps your login; “Delete my account” removes the account and everything in it, permanently. Both ask you to type your email to confirm, since neither can be undone.",
+  },
+  {
+    q: "What happens if there's a security incident?",
+    a: (
+      <>
+        FinMe stores your data with per-user access controls and reasonable security precautions,
+        but no system is unbreakable. If an incident affecting your data ever happened, you'd be
+        told about it - see the <Link to="/privacy">Privacy Policy</Link> for exactly what that
+        commitment means.
+      </>
+    ),
+  },
 ];
 
 export function Landing() {
@@ -145,7 +182,7 @@ export function Landing() {
   const [demoStatus, setDemoStatus] = useState<"idle" | "running" | "done">("idle");
   const [demoPct, setDemoPct] = useState(0);
   const [day, setDay] = useState(21);
-  const [openFaq, setOpenFaq] = useState<number | null>(1);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [simAccount, setSimAccount] = useState(0);
   const [simBalance, setSimBalance] = useState(3500);
   const intervalRef = useRef<number | null>(null);
@@ -266,6 +303,9 @@ export function Landing() {
             <span>CR = money in &middot; DR = money out</span>
           </div>
         </div>
+        <p className="landing-inner" style={{ marginTop: 12, fontSize: 12.5, color: "var(--ink-40)" }}>
+          Sample data shown above and throughout this page - fictional, for illustration only.
+        </p>
       </section>
 
       <section id="how-it-works" className="landing-section landing-section--band">
@@ -810,10 +850,17 @@ export function Landing() {
                 <li><Link to="/register">Create account</Link></li>
               </ul>
             </div>
+            <div>
+              <h4>Legal</h4>
+              <ul>
+                <li><Link to="/privacy">Privacy Policy</Link></li>
+                <li><Link to="/terms">Terms &amp; Conditions</Link></li>
+              </ul>
+            </div>
           </div>
           <div className="landing-footer__bottom">
             <span>&copy; 2026 FinMe. Built in South Africa. All amounts in ZAR.</span>
-            <span style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>Sample data throughout - fictional</span>
+            <span>Not affiliated with any bank, financial institution, or credit bureau.</span>
           </div>
         </div>
       </footer>
