@@ -8,7 +8,7 @@ import "./Legal.css";
  * Not legal advice, not reviewed by a lawyer.
  */
 export function Terms() {
-  useDocumentTitle("Terms & Conditions — FinMe");
+  useDocumentTitle("Terms & Conditions | FinMe");
 
   return (
     <div className="legal-page">
@@ -145,6 +145,13 @@ export function Terms() {
             break, or be temporarily unavailable while being worked on. Statement extraction in
             particular depends on third-party AI providers' own availability and rate limits, and
             can occasionally take longer than expected.
+          </p>
+          <p>
+            Account verification and other emails are sent through a third-party mail relay and
+            can be filtered by strict institutional mail systems - university, work, and
+            government addresses filter harder than personal email as a general rule, not because
+            of anything specific to any one organisation. A personal email address (Gmail,
+            Outlook, and similar) is currently the more reliable choice for receiving them.
           </p>
         </section>
 

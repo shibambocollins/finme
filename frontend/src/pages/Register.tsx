@@ -12,7 +12,7 @@ interface MessageResponse {
 }
 
 export function Register() {
-  useDocumentTitle("Create your account — FinMe");
+  useDocumentTitle("Create your account | FinMe");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -103,6 +103,10 @@ export function Register() {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+        <p style={{ margin: "2px 0 0", fontSize: 12.5, lineHeight: 1.4, color: "var(--ink-40)" }}>
+          Personal email (Gmail, Outlook, etc.) delivers the verification link more reliably
+          than university, work, or government email.
+        </p>
         <label htmlFor="password">Password</label>
         <PasswordInput
           id="password"

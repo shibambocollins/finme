@@ -180,7 +180,7 @@ const FAQS = [
 ];
 
 export function Landing() {
-  useDocumentTitle("FinMe — Track spending & credit health");
+  useDocumentTitle("FinMe | Track spending & credit health");
   const [source, setSource] = useState<SourceId>("statement");
   const [cashText, setCashText] = useState("lunch R150 cash today");
   const [demoStatus, setDemoStatus] = useState<"idle" | "running" | "done">("idle");
