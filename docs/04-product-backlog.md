@@ -85,8 +85,11 @@ assumed.
 
 Both built 2026-08-23. The weekly email is scheduled Monday 07:00 (Africa/Johannesburg),
 configurable via `WEEKLY_ANALYSIS_CRON`, and disabled in the dev profile so a local run never
-mails anyone. It needs `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` in `backend/.env` before it can
-actually send — a Gmail App Password, not an account password. See `05-test-plan.md` for the
+mails anyone. It needs `SMTP_USERNAME`, `SMTP_PASSWORD` and `MAIL_FROM_ADDRESS` in
+`backend/.env` before it can actually send (Brevo's free SMTP relay - see `07-tech-stack.md`;
+originally Gmail SMTP + an App Password, switched 2026-08-28 after Gmail's `Authentication
+failed` on a from-scratch setup surfaced the "personal account repurposed as an app's mail
+relay" problem directly). See `05-test-plan.md` for the
 evaluation harness.
 
 ## Iteration 7 — Manual/Cash Entry via Prompt
