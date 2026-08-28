@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import "./Landing.css";
 
 /**
@@ -138,6 +139,7 @@ const FAQS = [
 ];
 
 export function Landing() {
+  useDocumentTitle("FinMe — Track spending & credit health");
   const [source, setSource] = useState<SourceId>("statement");
   const [cashText, setCashText] = useState("lunch R150 cash today");
   const [demoStatus, setDemoStatus] = useState<"idle" | "running" | "done">("idle");
@@ -184,6 +186,9 @@ export function Landing() {
 
   return (
     <div className="landing">
+      <a href="#top" className="skip-link">
+        Skip to content
+      </a>
       <header className="landing-header">
         <a href="#top" className="landing-header__brand">
           Fin<span>Me</span>
