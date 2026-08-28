@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostJson, apiPut, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 type PaymentStatus = "ON_TIME" | "LATE" | "DEFAULTED" | "UNKNOWN";
 
@@ -77,6 +78,7 @@ const percent = (ratio: number | null) =>
 const EMPTY_ACCOUNT = { accountName: "", balance: "", creditLimit: "", paymentStatus: "UNKNOWN" as PaymentStatus };
 
 export function Credit() {
+  useDocumentTitle("Credit — FinMe");
   const { token } = useAuth();
   const [profile, setProfile] = useState<CreditProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -229,7 +231,7 @@ export function Credit() {
   return (
     <>
       <AppHeader active="credit" />
-      <main className="page">
+      <main className="page" id="main-content">
         <h1>Credit</h1>
 
       {error && <p className="form-error">{error}</p>}

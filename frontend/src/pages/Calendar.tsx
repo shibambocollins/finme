@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { apiGet, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 interface CalendarDay {
   date: string;
@@ -42,6 +43,7 @@ function monthLabel(month: string): string {
 }
 
 export function CalendarPage() {
+  useDocumentTitle("Calendar — FinMe");
   const { token } = useAuth();
   const [month, setMonth] = useState(currentMonth());
   const [calendar, setCalendar] = useState<CalendarResponse | null>(null);
@@ -99,7 +101,7 @@ export function CalendarPage() {
   return (
     <>
       <AppHeader active="calendar" />
-      <main className="page">
+      <main className="page" id="main-content">
         <h1>Calendar</h1>
 
       {error && <p className="form-error">{error}</p>}
