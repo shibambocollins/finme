@@ -9,6 +9,7 @@ import { Budgets } from "./pages/Budgets";
 import { CalendarPage } from "./pages/Calendar";
 import { AuthCallback } from "./pages/AuthCallback";
 import { Landing } from "./pages/Landing";
+import { Settings } from "./pages/Settings";
 import "./App.css";
 
 /** The public marketing page at "/" for a logged-out visitor; a signed-in one goes straight to
@@ -55,6 +56,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           }
         />
