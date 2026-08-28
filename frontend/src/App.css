@@ -531,6 +531,36 @@ input::placeholder {
   flex: 0 0 auto;
 }
 
+.password-field {
+  position: relative;
+  width: 100%;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 62px;
+}
+
+.password-field__toggle {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  padding: 5px 10px;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-40);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.password-field__toggle:hover:not(:disabled) {
+  transform: translateY(-50%);
+  box-shadow: none;
+  color: var(--ink);
+}
+
 .auth-form p {
   margin-top: 14px;
   font-size: 14px;
