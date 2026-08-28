@@ -163,6 +163,10 @@ const FAQS = [
     a: "Yes, either one, any time - from Settings. “Clear my data” removes every transaction, statement, receipt, budget and credit profile but keeps your login; “Delete my account” removes the account and everything in it, permanently. Both ask you to type your email to confirm, since neither can be undone.",
   },
   {
+    q: "I registered but never got the verification email. What happened?",
+    a: "Most likely it was filtered, not lost - check spam or junk first. This is more common with university, work, or government email addresses, which often filter harder than personal email. Registering again with a personal address (Gmail, Outlook, and similar) is currently the more reliable option.",
+  },
+  {
     q: "What happens if there's a security incident?",
     a: (
       <>
