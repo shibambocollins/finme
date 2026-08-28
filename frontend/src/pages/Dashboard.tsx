@@ -3,6 +3,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -89,6 +90,14 @@ const EMPTY_EDIT_FORM: TransactionEditForm = {
   paymentMethod: "UNKNOWN",
 };
 
+/** "2026-08" -> "Aug" - the trend axis reads across a handful of recent months, where the year
+ *  is implied and just adds noise; the month-over-month comparison line above it still says the
+ *  full previous-month name for anyone who needs the year disambiguated. */
+const formatMonthShort = (month: string): string => {
+  const [year, m] = month.split("-").map(Number);
+  return new Date(year, m - 1, 1).toLocaleDateString(undefined, { month: "short" });
+};
+
 const editFormFrom = (t: Transaction): TransactionEditForm => ({
   date: t.date,
   merchant: t.merchant,
@@ -126,6 +135,11 @@ export function Dashboard() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<TransactionEditForm>(EMPTY_EDIT_FORM);
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Purely a client-side window over the trend series already fetched for the chart - the
+  // backend returns the whole history in one call, so "3 months" vs "6 months" is just how much
+  // of the end of that array gets rendered, not a different request.
+  const [trendRange, setTrendRange] = useState<"3" | "6" | "all">("6");
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -191,6 +205,28 @@ export function Dashboard() {
     if (rounded === 0) return `About the same as ${previousMonthLabel}`;
     return `${rounded}% ${percentChange > 0 ? "more" : "less"} than ${previousMonthLabel}`;
   }, [summary]);
+
+  const trendData = useMemo(() => {
+    if (!summary) return [];
+    const sorted = [...summary.trend].sort((a, b) => a.month.localeCompare(b.month));
+    if (trendRange === "all") return sorted;
+    return sorted.slice(-Number(trendRange));
+  }, [summary, trendRange]);
+
+  // Money in vs money out - the direction every transaction already carries, just summed
+  // instead of listed. All-time, matching the scope of the total-spend figure above it.
+  const moneyFlow = useMemo(() => {
+    let in_ = 0;
+    let out = 0;
+    for (const t of transactions) {
+      if (t.direction === "CREDIT") in_ += t.amount;
+      else out += t.amount;
+    }
+    return [
+      { label: "Money in", amount: in_ },
+      { label: "Money out", amount: out },
+    ];
+  }, [transactions]);
 
   const visibleTransactions = useMemo(() => {
     const query = filterQuery.trim().toLowerCase();
@@ -489,15 +525,27 @@ export function Dashboard() {
           )}
 
           {summary.categoryBreakdown.length > 0 && (
-            <div className="chart-card">
+            <div className="chart-card chart-card--wide">
               <h2>Spend by category</h2>
-              <ResponsiveContainer width="100%" height={Math.max(120, summary.categoryBreakdown.length * 40)}>
-                <BarChart data={summary.categoryBreakdown} layout="vertical" margin={{ left: 24 }}>
-                  <CartesianGrid horizontal={false} stroke="var(--line)" />
+              <ResponsiveContainer width="100%" height={Math.max(160, summary.categoryBreakdown.length * 34)}>
+                <BarChart
+                  data={summary.categoryBreakdown}
+                  layout="vertical"
+                  margin={{ left: 8, right: 24 }}
+                  barCategoryGap={10}
+                >
+                  <CartesianGrid horizontal stroke="var(--line)" />
                   <XAxis type="number" tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
-                  <YAxis type="category" dataKey="category" stroke="var(--ink-50)" fontSize={12} width={100} />
+                  <YAxis type="category" dataKey="category" stroke="var(--ink-50)" fontSize={12} width={140} />
                   <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]} />
-                  <Bar dataKey="amount" fill={ACCENT} barSize={20} radius={[0, 4, 4, 0]} />
+                  <Bar
+                    dataKey="amount"
+                    fill={ACCENT}
+                    stroke="var(--forest-deep)"
+                    strokeWidth={1}
+                    barSize={18}
+                    radius={[0, 4, 4, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -505,15 +553,48 @@ export function Dashboard() {
 
           {summary.trend.length > 0 && (
             <div className="chart-card">
-              <h2>Spend trend</h2>
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+                <h2>Spend trend</h2>
+                <select
+                  value={trendRange}
+                  onChange={(e) => setTrendRange(e.target.value as "3" | "6" | "all")}
+                  aria-label="Trend range"
+                  style={{ padding: "4px 8px", fontSize: 12.5 }}
+                >
+                  <option value="3">Last 3 months</option>
+                  <option value="6">Last 6 months</option>
+                  <option value="all">All time</option>
+                </select>
+              </div>
               <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={summary.trend}>
+                <LineChart data={trendData}>
                   <CartesianGrid vertical={false} stroke="var(--line)" />
-                  <XAxis dataKey="month" stroke="var(--ink-50)" fontSize={12} />
+                  <XAxis dataKey="month" tickFormatter={formatMonthShort} stroke="var(--ink-50)" fontSize={12} />
                   <YAxis tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
-                  <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]} />
+                  <Tooltip
+                    labelFormatter={(label) => (typeof label === "string" ? formatMonthShort(label) : label)}
+                    formatter={(value) => [`R${Number(value).toFixed(2)}`, "Spend"]}
+                  />
                   <Line type="monotone" dataKey="amount" stroke={ACCENT} strokeWidth={2} dot={{ r: 4, fill: ACCENT }} />
                 </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {(moneyFlow[0].amount > 0 || moneyFlow[1].amount > 0) && (
+            <div className="chart-card">
+              <h2>Money in vs money out</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={moneyFlow} margin={{ top: 8 }}>
+                  <CartesianGrid vertical={false} stroke="var(--line)" />
+                  <XAxis dataKey="label" stroke="var(--ink-50)" fontSize={12} />
+                  <YAxis tickFormatter={(v: number) => `R${v}`} stroke="var(--ink-50)" fontSize={12} />
+                  <Tooltip formatter={(value) => [`R${Number(value).toFixed(2)}`, "Amount"]} />
+                  <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={64} stroke="var(--forest-deep)" strokeWidth={1}>
+                    <Cell fill={ACCENT} />
+                    <Cell fill="var(--sage)" />
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           )}
