@@ -59,7 +59,7 @@ export function Register() {
           &larr; Back to FinMe
         </Link>
         <div className="auth-form">
-          <h1>Check your email</h1>
+          <h1>Welcome to FinMe!</h1>
           <p>
             We sent a verification link to <strong>{registeredEmail}</strong>. Click it to
             activate your account before logging in.
