@@ -16,6 +16,7 @@ import { apiDelete, apiGet, apiPostForm, apiPostJson, apiPut, ApiError } from ".
 import { AppHeader } from "../components/AppHeader";
 import { SUGGESTED_CATEGORIES } from "../constants/categories";
 import { downloadCsv } from "../utils/csv";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 type Direction = "DEBIT" | "CREDIT";
 type PaymentMethod = "CASH" | "CARD" | "UNKNOWN";
@@ -109,6 +110,7 @@ const editFormFrom = (t: Transaction): TransactionEditForm => ({
 });
 
 export function Dashboard() {
+  useDocumentTitle("Dashboard — FinMe");
   const { token } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -457,9 +459,9 @@ export function Dashboard() {
   const uploadPercent = uploadPercentMatch ? Number(uploadPercentMatch[1]) : null;
 
   return (
-    <div className="page">
+    <>
       <AppHeader active="dashboard" />
-
+      <main className="page" id="main-content">
       <section className="upload-section">
         <div>
           <label className="upload-button">
@@ -809,6 +811,7 @@ export function Dashboard() {
           </div>
         )}
       </section>
-    </div>
+      </main>
+    </>
   );
 }
