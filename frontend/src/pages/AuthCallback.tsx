@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { decodeJwtPayload } from "../auth/jwt";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 /**
  * Shared landing page for anything that ends in "backend redirects here with a token in the
@@ -9,6 +10,7 @@ import { decodeJwtPayload } from "../auth/jwt";
  * they share this page rather than each getting a near-duplicate one.
  */
 export function AuthCallback() {
+  useDocumentTitle("Signing you in… — FinMe");
   const { completeOAuthLogin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

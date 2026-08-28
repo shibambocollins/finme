@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostJson, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
 import { SUGGESTED_CATEGORIES } from "../constants/categories";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 interface BudgetStatus {
   id: number;
@@ -18,6 +19,7 @@ interface BudgetStatus {
 const EMPTY_FORM = { category: "", monthlyLimit: "" };
 
 export function Budgets() {
+  useDocumentTitle("Budgets — FinMe");
   const { token } = useAuth();
   const [budgets, setBudgets] = useState<BudgetStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +77,7 @@ export function Budgets() {
   return (
     <>
       <AppHeader active="budgets" />
-      <main className="page">
+      <main className="page" id="main-content">
         <h1>Budgets</h1>
 
       {error && <p className="form-error">{error}</p>}
