@@ -9,8 +9,7 @@ import "./Legal.css";
  * HIPAA does not apply to it at all - claiming it would be false) and formal POPIA certification
  * (real compliance requires a registered Information Officer, a PAIA manual, and documented
  * processes this solo, dev-stage project does not yet have - so this describes alignment with
- * POPIA's principles, not certified compliance). Fields Collins needs to fill in before this is
- * relied on for anything beyond a portfolio demo are marked inline.
+ * POPIA's principles, not certified compliance).
  * <p>
  * Not legal advice, and not reviewed by a lawyer - a good-faith, accurate description of real
  * practices, written the way a careful solo developer's policy should read at this stage.
