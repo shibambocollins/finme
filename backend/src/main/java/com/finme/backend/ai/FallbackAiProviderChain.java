@@ -10,8 +10,7 @@ import java.util.function.Function;
 /**
  * NFR-7: falls back to the next provider on failure rather than surfacing an unhandled error.
  * Pure orchestration, no HTTP of its own - deliberately just try-in-order-then-give-up, no
- * retry-with-backoff or circuit breaker. Unit-tested against fake AiProvider stubs, no real
- * network calls or quota spent.
+ * retry-with-backoff or circuit breaker.
  */
 public class FallbackAiProviderChain implements AiProvider {
 
@@ -52,9 +51,8 @@ public class FallbackAiProviderChain implements AiProvider {
             try {
                 return call.apply(provider);
             } catch (AiProviderException ex) {
-                // Log the root cause, not just ex.getMessage(). A wrapped "Groq request
-                // failed" told us nothing while the real answer - an HTTP 413 naming the
-                // exact token limit - sat one level down in the cause chain.
+                // Log the root cause, not just ex.getMessage() - a wrapped "Groq request
+                // failed" hides the real answer one level down in the cause chain.
                 log.warn("AI provider {} failed, falling back to next in chain: {} [cause: {}]",
                         provider.getClass().getSimpleName(), ex.getMessage(), rootCauseOf(ex));
                 lastFailure = ex;
