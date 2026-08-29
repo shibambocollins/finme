@@ -10,12 +10,6 @@ interface ProfileResponse {
   displayName: string;
 }
 
-/**
- * Shared shape for a destructive, confirmation-gated account action (clear data / delete
- * account) - collapsed by default, and only reveals the real "do it" button once the caller has
- * typed their own email back. The backend enforces the same match independently (UserService),
- * so this is a real UX gate, not the only thing standing between a stray click and data loss.
- */
 function DangerAction({
   title,
   description,
