@@ -47,7 +47,6 @@ public class DashboardController {
         return recommendationService.getRecommendations(authenticatedUser.currentUserId());
     }
 
-    /** One day per calendar tile, including zero-spend days. Defaults to the current month. */
     @GetMapping("/calendar")
     public CalendarResponse calendar(
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month) {
