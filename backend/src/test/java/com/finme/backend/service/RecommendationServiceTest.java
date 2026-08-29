@@ -31,7 +31,6 @@ class RecommendationServiceTest {
     private final AtomicInteger recommendCalls = new AtomicInteger();
     private final AtomicReference<String> lastPrompt = new AtomicReference<>();
 
-    /** Records what the model was asked, so tests can assert on it rather than assume. */
     private AiProvider recordingProvider(List<String> reply) {
         return new StubAiProvider() {
             @Override
