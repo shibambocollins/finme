@@ -6,11 +6,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
- * Vision counterpart to FallbackAiProviderChain - a deliberate small duplicate rather than a
- * shared generic abstraction, since AiProvider and VisionAiProvider have different method
- * signatures and this orchestration logic isn't worth the extra indirection for two call
- * sites. Same NFR-7 behavior: try in order, fall back on failure, give up only once every
- * provider has failed.
+ * Vision counterpart to FallbackAiProviderChain. Same NFR-7 behavior: try in order, fall back on
+ * failure, give up only once every provider has failed.
  */
 public class FallbackVisionAiProviderChain implements VisionAiProvider {
 
