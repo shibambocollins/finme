@@ -11,16 +11,13 @@ import java.util.Map;
  * latter routes this model through a raw-completion endpoint that doesn't reliably follow
  * instructions. Still not the OpenAI-compatible shape other providers use (no "model" field, no
  * /v1/ path, different response envelope), so this doesn't extend
- * AbstractOpenAiCompatibleProvider. Model defaults to @cf/meta/llama-3.1-8b-instruct, a
- * Cloudflare-hosted model (not a proxied third-party one), to stay within the free allocation.
+ * AbstractOpenAiCompatibleProvider.
  */
 public class CloudflareProvider implements AiProvider {
 
     /**
      * Without an explicit max_tokens, this call ran on whatever Cloudflare's own unstated
-     * default is - fine for a small chunk, but a larger one came back truncated as invalid
-     * JSON. This model's measured completion cost runs close to Groq's, comfortably under this
-     * cap.
+     * default is - fine for a small chunk, but a larger one came back truncated as invalid JSON.
      */
     private static final int MAX_TOKENS = 4000;
 
@@ -58,7 +55,6 @@ public class CloudflareProvider implements AiProvider {
         return AiExtractionSupport.parseRecommendations(json);
     }
 
-    /** One Workers AI round trip, returning the balanced JSON object found in the reply. */
     private String run(String prompt) {
         String url = "https://api.cloudflare.com/client/v4/accounts/" + accountId + "/ai/run/" + model;
         Map<String, Object> requestBody = Map.of(
