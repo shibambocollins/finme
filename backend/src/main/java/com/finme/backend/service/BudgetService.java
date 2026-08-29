@@ -73,11 +73,6 @@ public class BudgetService {
                 .orElseThrow(() -> new BudgetNotFoundException(budgetId));
     }
 
-    /**
-     * One fetch, grouped by lower-cased category, reused across every budget - matching the
-     * "single fetch then filter in Java" pattern DashboardService and SpendAnalysisService
-     * already use, rather than one query per budget.
-     */
     private Map<String, BigDecimal> spendByCategoryThisMonth(Long userId) {
         YearMonth thisMonth = YearMonth.now(clock);
         return transactionRepository
