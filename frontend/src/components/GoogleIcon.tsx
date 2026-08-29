@@ -1,5 +1,3 @@
-/** Google's standard multicolour "G" mark, inlined as SVG - no external asset request, no font
- *  icon dependency, and it survives the artifact/build pipeline exactly like any other markup. */
 export function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" focusable="false">

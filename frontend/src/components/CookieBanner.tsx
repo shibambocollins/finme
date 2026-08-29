@@ -2,12 +2,6 @@ import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "finme.cookie-notice-dismissed";
 
-/**
- * A notice, not an accept/reject consent flow - FinMe doesn't set any tracking or analytics
- * cookie today. The only cookie in the app is the strictly necessary, short-lived one Google's
- * OAuth login needs mid-handshake (see SecurityConfig). Framed honestly rather than presenting
- * a choice that doesn't actually exist yet; revisit this if analytics is ever added.
- */
 export function CookieBanner() {
   const [dismissed, setDismissed] = useState(true);
 
@@ -24,8 +18,7 @@ export function CookieBanner() {
     try {
       localStorage.setItem(STORAGE_KEY, "1");
     } catch {
-      // Private browsing or storage disabled - the banner just reappears next visit, an
-      // acceptable fallback rather than something worth failing loudly over.
+      // ignore
     }
   };
 

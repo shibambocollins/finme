@@ -48,8 +48,6 @@ export function Budgets() {
     setBusy(true);
     setError(null);
     try {
-      // Posting a category that already has a budget updates its limit - the same category
-      // typed twice is a correction, not a second competing budget.
       await apiPostJson("/api/budgets", { category: form.category.trim(), monthlyLimit: form.monthlyLimit }, token);
       setForm(EMPTY_FORM);
       await load();
