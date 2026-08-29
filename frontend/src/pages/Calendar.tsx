@@ -31,8 +31,6 @@ function currentMonth(): string {
 
 function shiftMonth(month: string, delta: number): string {
   const [year, m] = month.split("-").map(Number);
-  // Date's month is 0-indexed and normalizes overflow/underflow (month 0 -> previous
-  // December, month 13 -> next January) automatically, so no separate year-rollover logic.
   const shifted = new Date(year, m - 1 + delta, 1);
   return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -73,8 +71,6 @@ export function CalendarPage() {
 
   const leadingBlanks = useMemo(() => {
     if (!calendar?.days.length) return 0;
-    // Reuses the day's own date rather than reparsing the month string, so the offset can
-    // never disagree with what the grid is actually about to render.
     const [year, m, d] = calendar.days[0].date.split("-").map(Number);
     return new Date(year, m - 1, d).getDay();
   }, [calendar]);
@@ -83,8 +79,6 @@ export function CalendarPage() {
     setSelectedDate(date);
     setLoadingDay(true);
     try {
-      // Reuses the same date-range filter the transactions list uses elsewhere in the app -
-      // one day is just a range whose start and end are the same date.
       setDayTransactions(await apiGet<DayTransaction[]>(`/api/transactions?from=${date}&to=${date}`, token));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not load that day's transactions");
@@ -130,8 +124,6 @@ export function CalendarPage() {
           ))}
           {calendar.days.map((day) => {
             const dayNumber = Number(day.date.split("-")[2]);
-            // Capped well short of opaque - the tint is a legibility cue over dark ink text, not
-            // a replacement for the number, so it never gets dark enough to fight with it.
             const intensity = day.total > 0 ? Math.min(0.32, Math.max(0.08, (day.total / maxDaySpend) * 0.32)) : 0;
             return (
               <button
