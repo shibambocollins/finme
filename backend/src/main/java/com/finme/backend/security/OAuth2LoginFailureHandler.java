@@ -9,10 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-/**
- * Spring Security's default OAuth2 failure behavior redirects to /login?error, which doesn't
- * exist in this SPA - send the browser back to the real frontend login page instead.
- */
 @Component
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
 
