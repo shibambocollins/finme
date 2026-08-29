@@ -2,6 +2,10 @@
 .idea/
 .DS_Store
 Thumbs.db
-hs_err_pid20240.log
-backend/src/main/resources/application.properties
-backend/src/main/resources/application.properties
+
+# JVM crash artifacts - diagnostic output from whatever process crashed, never something with a
+# reason to be committed. Patterns, not literal filenames: the PID changes every time, and a
+# filename-only rule already let two of these (backend/hs_err_pid48904.log,
+# backend/replay_pid48904.log) through before this caught them by pattern instead.
+hs_err_pid*.log
+replay_pid*.log
