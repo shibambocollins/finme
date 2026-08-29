@@ -9,11 +9,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Shared prompt/parsing logic for every AiProvider implementation - not part of the public
- * AiProvider contract, just an internal helper so Groq/OpenRouter/Cloudflare don't each
- * duplicate this.
- */
 final class AiExtractionSupport {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -21,16 +16,6 @@ final class AiExtractionSupport {
     private AiExtractionSupport() {
     }
 
-    /**
-     * The merchants that actually dominate South African bank statements, named explicitly - the
-     * category definitions above draw the boundaries, this supplies the knowledge to place a
-     * merchant inside them (a model can know restaurants are Dining and still not know "NANDOS"
-     * is one). Domain knowledge, not tuning to a test set: the app is ZAR-only and
-     * single-country by design, so the universe of merchants a real statement contains is small
-     * and knowable. Worth being honest that several of these names do also appear in the golden
-     * set, so the harness's category-accuracy figure isn't fully independent of this prompt for
-     * those merchants - the definitions and the unlisted-merchant rule are what still generalise.
-     */
     private static final String COMMON_SOUTH_AFRICAN_MERCHANTS =
             "Common South African merchants, by category:\n"
                     + "- Groceries: Woolworths, Checkers, Checkers Hyper, Pick n Pay, Shoprite, "
@@ -51,15 +36,6 @@ final class AiExtractionSupport {
                     + "TymeBank or Discovery Bank.\n"
                     + "A merchant not listed here is categorised by the definitions above.\n";
 
-    /**
-     * Category definitions shared by both prompts. Written as principles ("the merchant's
-     * primary business decides"), not a list of merchant names that happened to fail on the
-     * golden set - naming specific merchants would raise that evaluation number without
-     * teaching the model anything about the next statement. A bare list of category names left
-     * every boundary to guesswork and measurably hurt category accuracy; these definitions
-     * exist to make the systematic errors that caused (supermarkets as "Shopping", fuel as
-     * "Utilities") stop happening.
-     */
     private static final String CATEGORY_GUIDE =
             "Assign exactly one category from this list, using these definitions:\n"
                     + "- Groceries: supermarkets and food shops. A supermarket stays Groceries "
@@ -103,18 +79,6 @@ final class AiExtractionSupport {
                 + "Statement text:\n" + redactedText;
     }
 
-    /**
-     * Parses a free-text description of a purchase into transactions (FR-1.5.1, FR-1.5.2).
-     * <p>
-     * Today's date is supplied rather than left to the model. Users write "yesterday" and "last
-     * Friday", and a model has no reliable clock - asking it to resolve a relative date against
-     * a date it guessed is how a transaction silently lands in the wrong month, and therefore
-     * the wrong figure on the dashboard. The application knows the date; it states it.
-     * <p>
-     * Payment method defaults to CASH because that is what this feature exists for: purchases
-     * that will never appear on a statement or produce a receipt. An explicit mention of a card
-     * still wins - the default applies to silence, not to contradiction.
-     */
     static String buildManualEntryPrompt(String naturalLanguage, java.time.LocalDate today) {
         return "You are a financial transaction extraction assistant. Convert the user's "
                 + "description of what they spent into structured transactions. Respond with "
@@ -139,12 +103,6 @@ final class AiExtractionSupport {
                 + "\nUser description:\n" + naturalLanguage;
     }
 
-    /**
-     * A receipt photo is one purchase, not a list to scan through - asks for the receipt's
-     * total (not itemized line items, which would over-fragment compared to how a statement
-     * represents the same purchase as one line) plus paymentMethod, which a statement extraction
-     * never needs (always CARD, set by the caller) but a receipt may show printed.
-     */
     static String buildReceiptPrompt() {
         return "You are a financial transaction extraction assistant. This image is a photo of "
                 + "a single purchase receipt. Extract ONE transaction representing the receipt's "
@@ -164,14 +122,11 @@ final class AiExtractionSupport {
     }
 
     /**
-     * Asks for a prioritised credit improvement plan over already-calculated figures
-     * (FR-2.3.1). Two constraints matter more here than in the spend equivalent below: the
-     * model must not compute (utilization comes from CreditUtilization and is the whole basis
-     * of the advice), and it must not promise a score outcome - nobody can guarantee what a
-     * bureau will do, so a sentence like "this will raise your score by 40 points" would be a
-     * fabrication the app appears to stand behind. The user-facing disclaimer (FR-2.3.3) is a
-     * constant added by CreditAnalysisService rather than requested here, so no model output
-     * can weaken, reword or omit it.
+     * The model must not compute (utilization comes from CreditUtilization and is the whole
+     * basis of the advice), and must not promise a score outcome - nobody can guarantee what a
+     * bureau will do. The user-facing disclaimer (FR-2.3.3) is a constant added by
+     * CreditAnalysisService rather than requested here, so no model output can weaken, reword or
+     * omit it.
      */
     static String buildCreditAnalysisPrompt(String creditFactsSummary) {
         return "You are a credit coach. Below is a user's credit position, already calculated. "
@@ -192,11 +147,9 @@ final class AiExtractionSupport {
     }
 
     /**
-     * Asks for spend recommendations over figures that have already been calculated (FR-1.7.4).
-     * The instruction not to compute or estimate anything is the important line - everything
-     * numeric in the summary was produced by deterministic code (see SpendMath), and FR-2.2.1
-     * requires it stays that way. Asking the model to quote only what it was given makes any
-     * invented number an obvious defect rather than an indistinguishable one.
+     * Everything numeric in the summary was produced by deterministic code (see SpendMath), and
+     * FR-2.2.1 requires it stays that way - the model is only ever asked to quote what it was
+     * given, never to compute.
      */
     static String buildRecommendationPrompt(String spendFactsSummary) {
         return "You are a personal finance assistant. Below is a summary of one user's "
@@ -213,12 +166,6 @@ final class AiExtractionSupport {
                 + "Spending summary:\n" + spendFactsSummary;
     }
 
-    /**
-     * Reads the recommendations array, keeping only non-blank strings. A model that returns
-     * fewer than asked, or pads with empty entries, yields a shorter list rather than an error -
-     * an imperfect set of suggestions is still useful, and this is advisory text, not a figure
-     * anyone will act on financially.
-     */
     static List<String> parseRecommendations(String jsonContent) {
         JsonNode root;
         try {
@@ -242,12 +189,11 @@ final class AiExtractionSupport {
     }
 
     /**
-     * Pulls choices[0].message.content out of an OpenAI-compatible chat completion response,
-     * rejecting a response the model didn't finish. The finish_reason check is the important
-     * part: a truncated extraction does not reliably produce broken JSON that parsing alone
-     * would catch - it can yield a perfectly valid, silently incomplete transaction list.
-     * Treating that as a provider failure (rather than trusting it) lets FallbackAiProviderChain
-     * try the next provider instead of quietly reporting a wrong total.
+     * The finish_reason check is the important part: a truncated extraction does not reliably
+     * produce broken JSON that parsing alone would catch - it can yield a perfectly valid,
+     * silently incomplete transaction list. Treating that as a provider failure (rather than
+     * trusting it) lets FallbackAiProviderChain try the next provider instead of quietly
+     * reporting a wrong total.
      */
     static String extractOpenAiMessageContent(String responseBody, String providerName) {
         try {
@@ -271,12 +217,11 @@ final class AiExtractionSupport {
     }
 
     /**
-     * Pulls the model's output out of a Cloudflare Workers AI response. Cloudflare's own docs
-     * examples for this shape were confirmed wrong (a flagged upstream GitHub issue, not a
-     * guess): the real response nests the result under "result.response", already a parsed
-     * JSON <em>object</em> matching the requested schema, not a string to re-parse. Still falls
-     * back to "result" or "result.response" as a plain string, in case a different model or
-     * endpoint on Cloudflare's side ever returns one of those instead.
+     * Cloudflare's own docs examples for this shape were confirmed wrong (a flagged upstream
+     * GitHub issue, not a guess): the real response nests the result under "result.response",
+     * already a parsed JSON <em>object</em> matching the requested schema, not a string to
+     * re-parse. Still falls back to "result" or "result.response" as a plain string, in case a
+     * different model or endpoint on Cloudflare's side ever returns one of those instead.
      */
     static String extractCloudflareResult(String responseBody) {
         try {
@@ -303,10 +248,6 @@ final class AiExtractionSupport {
         }
     }
 
-    /**
-     * Pulls the first balanced-looking {...} substring out of text that might contain
-     * surrounding prose or markdown fencing - for providers without a guaranteed JSON mode.
-     */
     static String extractJsonObject(String text) {
         int start = text.indexOf('{');
         int end = text.lastIndexOf('}');
@@ -356,13 +297,10 @@ final class AiExtractionSupport {
             return new ExtractedTransaction(
                     date, merchant, amount, category, description, paymentMethod, direction);
         } catch (DateTimeParseException | NumberFormatException | ArithmeticException | NullPointerException ex) {
-            // Skip a malformed entry rather than guess at bad financial data - the rest of
-            // the batch is still usable.
             return null;
         }
     }
 
-    /** null, JSON null, and "" all mean "not extracted" - callers only ever branch on null. */
     private static String optionalText(JsonNode node, String field) {
         if (!node.has(field) || node.get(field).isNull()) {
             return null;

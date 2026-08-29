@@ -2,8 +2,7 @@ package com.finme.backend.ai;
 
 /**
  * Thrown by an individual AiProvider on any failure (HTTP error, timeout, unparseable
- * response). Caught by FallbackAiProviderChain, which moves on to the next provider - not
- * meant to escape to callers directly.
+ * response). Caught by FallbackAiProviderChain, which moves on to the next provider.
  */
 public class AiProviderException extends RuntimeException {
 
