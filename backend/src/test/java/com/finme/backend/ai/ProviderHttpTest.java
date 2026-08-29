@@ -31,9 +31,6 @@ class ProviderHttpTest {
         HttpClientErrorException ex = HttpClientErrorException.create(
                 HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests", headers, body.getBytes(StandardCharsets.UTF_8),
                 StandardCharsets.UTF_8);
-        // HttpClientErrorException.create() returns the specific subclass for a known status -
-        // asserting that here means a Spring upgrade that changed this would fail loudly in a
-        // test, not silently produce a ClassCastException deep inside retryAfter().
         assertThat(ex).isInstanceOf(HttpClientErrorException.TooManyRequests.class);
         return (HttpClientErrorException.TooManyRequests) ex;
     }
@@ -81,20 +78,9 @@ class ProviderHttpTest {
     }
 
     // ------------------------------------------------------------------ the cap, end to end
-    //
-    // A real RestClient bound to Spring's own MockRestServiceServer, not a Mockito deep-stub of
-    // RestClient's fluent interface. That was tried first and failed for reasons unrelated to
-    // this class's logic: Mockito's RETURNS_DEEP_STUBS does not correctly chain through
-    // RestClient.RequestBodySpec.header(String, String...), a varargs method - the mocked chain
-    // silently returned null partway through, breaking every test that exercised a real
-    // request. Driving an actual (mocked-server) HTTP exchange sidesteps that entirely, and is
-    // more faithful besides: the 429-to-TooManyRequests translation comes from Spring's real
-    // error handling, not from an exception this test hand-assembled to look like it.
 
     @Test
     void waitsOutAShortRateLimitRatherThanFailing() {
-        // 429 once, then success - proving post() actually slept and retried, not that it
-        // returned the first response verbatim or failed outright.
         RestClient.Builder builder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         server.expect(requestTo("http://example.test"))
@@ -137,12 +123,4 @@ class ProviderHttpTest {
                 .isLessThan(2000);
         server.verify();
     }
-
-    // No test drives post() through a wait that is honoured right at the 90s cap boundary -
-    // ProviderHttp.sleep() performs a real Thread.sleep(), so proving that case end to end
-    // would mean an actual 90-second unit test. The boundary comparison itself
-    // (wait.compareTo(MAX_SINGLE_RATE_LIMIT_WAIT) > 0) is a single unambiguous operator with no
-    // off-by-one risk worth a 90-second test to guard; failsImmediatelyRatherThanSleeping...
-    // above proves the "too long" side, and waitsOutAShortRateLimit... proves the "honoured"
-    // side at a wait small enough to actually run.
 }

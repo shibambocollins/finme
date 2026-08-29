@@ -13,12 +13,6 @@ import com.finme.backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Account-settings operations for the signed-in user managing their own profile and data -
- * distinct from {@link AuthService}, which only ever handles proving who someone is
- * (register/login/OAuth/verify), never what they can change or remove about their account
- * afterwards.
- */
 @Service
 public class UserService {
 
@@ -58,11 +52,6 @@ public class UserService {
         return new ProfileResponse(user.getEmail(), user.getDisplayName());
     }
 
-    /**
-     * Removes every owned financial record (transactions, statements, receipts, budgets, and the
-     * credit profile if one exists) but keeps the account and login itself - a "start over"
-     * reset short of deleting the account entirely.
-     */
     @Transactional
     public void clearFinancialData(Long userId, ConfirmAccountActionRequest request) {
         User user = requireConfirmed(userId, request);
