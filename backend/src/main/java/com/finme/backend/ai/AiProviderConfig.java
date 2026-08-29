@@ -76,12 +76,11 @@ public class AiProviderConfig {
 
     /**
      * The read timeout is deliberately generous. A full statement extraction is a long
-     * generation, not a quick lookup, and the free tiers this chain is built on are slow:
-     * measured live on 2026-08-21, Groq returned in ~2s but the OpenRouter fallback
-     * (nemotron-3-super-120b:free) took 81s on the same 16-transaction statement. The previous
-     * 15s read timeout meant that fallback could never finish - it would abort mid-generation
-     * and be recorded as a provider failure, making the chain look broken when it was working.
-     * Connect timeout stays short: failing to open a socket is a real outage, not slowness.
+     * generation, not a quick lookup, and the free-tier fallback providers this chain relies on
+     * can take well over a minute where Groq itself takes seconds - a short timeout aborted that
+     * fallback mid-generation and recorded it as a provider failure, making a working chain look
+     * broken. Connect timeout stays short: failing to open a socket is a real outage, not
+     * slowness.
      */
     private SimpleClientHttpRequestFactory timeoutRequestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();

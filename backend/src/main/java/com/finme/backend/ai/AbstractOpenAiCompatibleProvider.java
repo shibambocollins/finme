@@ -15,35 +15,13 @@ import java.util.Map;
 abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
 
     /**
-     * The output budget is sized to the input rather than fixed, and this is a correctness
-     * concern in both directions.
-     * <p>
-     * Too small and extraction is silently truncated: measured live on 2026-08-21, Groq's own
-     * 2048 default let gpt-oss-20b spend 1947 tokens reasoning and emit a *syntactically
-     * valid* JSON object holding 1 of 16 transactions, which the old code parsed happily.
-     * <p>
-     * Too large and the request is refused before it starts: Groq's free tier limits tokens
-     * per minute to 8000 and counts prompt tokens <b>plus the requested max_tokens</b> against
-     * it, so a flat 8000 meant every call asked for 8797 and was rejected with HTTP 413 -
-     * whatever the statement's actual size. Reserved headroom is not free; it is spent from
-     * the rate limit whether the model needs it or not.
-     * <p>
-     * So: estimate what this specific text needs, and cap it low enough to leave room for the
-     * prompt. Anything that still overruns is caught by the finish_reason guard rather than
-     * being trusted.
-     * <p>
-     * These four defaults are Groq's own numbers, revised on 2026-08-27 against real
-     * measurements (see StatementTextChunker.ROWS_PER_CHUNK for the full table): actual
-     * completion cost ran ~40-67 tokens per extracted row, not 130, and the true fixed
-     * component was closer to 250 than 700.
-     * <p>
-     * They are deliberately overridable per subclass rather than shared outright. That same day
-     * of measurement found OpenRouter's configured free model (nemotron-3-super-120b) needing
-     * <b>5324</b> completion tokens for a 40-row chunk that Groq's gpt-oss-20b finished in 2380
-     * and Cloudflare's llama-3.1-8b-instruct in 2153 - more than double Groq's cost for
-     * identical input. A single shared budget tuned to Groq's numbers is exactly what made
-     * OpenRouter truncate mid-extraction (finish_reason=length) the moment a chunk grew large
-     * enough to expose the gap; see OpenRouterProvider for its own measured multiplier.
+     * The output budget is sized to the input rather than fixed - too small silently truncates
+     * extraction (a cut-off but still-valid JSON object with only some transactions in it); too
+     * large gets the request rejected outright on a free tier, since Groq counts prompt tokens
+     * plus requested max_tokens against the per-minute limit. Defaults below are Groq's own
+     * measured cost per extracted row, not a guess - overridable per subclass because
+     * OpenRouter's configured model runs over 2x more verbose on identical input (see
+     * OpenRouterProvider), and a shared budget tuned to Groq's numbers truncates there.
      */
     protected int tokensPerExtractedRow() {
         return 85;
@@ -93,11 +71,10 @@ abstract class AbstractOpenAiCompatibleProvider implements AiProvider {
     private final String providerName;
 
     /**
-     * The provider name is passed in rather than obtained from an abstract method. An earlier
-     * shape called providerName() from this constructor to build the HTTP helper - which works
-     * only because every subclass happens to return a string literal. A subclass that returned
-     * a field would have seen null, because its own fields are not assigned until after the
-     * superclass constructor completes. Name is data; treating it as data removes the trap.
+     * The provider name is passed in rather than obtained by calling an abstract method from
+     * this constructor - a subclass's own fields aren't assigned until after the superclass
+     * constructor returns, so a method backed by a field (rather than a string literal) would
+     * see null here. Treating the name as plain data avoids the trap entirely.
      */
     protected AbstractOpenAiCompatibleProvider(
             RestClient restClient, String baseUrl, String apiKey, String model, String providerName) {
