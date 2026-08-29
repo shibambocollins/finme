@@ -14,8 +14,7 @@ import java.util.Map;
  * This model requires accepting Meta's license before first use - the API returns 403 "Model
  * Agreement" until a one-off {"prompt": "agree"} request is sent to this same model/account.
  * Not code-fixable, and not a recurring issue once done; a fresh account or model swap would
- * need it repeated once. Model defaults to @cf/meta/llama-3.2-11b-vision-instruct, a
- * Cloudflare-hosted model, matching the text CloudflareProvider's free-allocation reasoning.
+ * need it repeated once.
  */
 public class CloudflareVisionProvider implements VisionAiProvider {
 
