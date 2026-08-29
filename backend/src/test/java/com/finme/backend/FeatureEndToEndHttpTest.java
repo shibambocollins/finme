@@ -38,14 +38,6 @@ class FeatureEndToEndHttpTest {
     @LocalServerPort
     private int port;
 
-    /**
-     * Plain RestTemplate rather than Boot's TestRestTemplate: Spring Boot 4 moved that class
-     * into a separate spring-boot-resttestclient module this project does not depend on, and
-     * pulling in a new dependency for one verification test is not worth it when the standard
-     * client (already on the classpath - this is a REST API) does the same job here. The one
-     * behavioural difference is that RestTemplate throws on 4xx/5xx instead of returning them
-     * as a normal ResponseEntity, which the 401/404 assertions below account for.
-     */
     private final RestTemplate rest = new RestTemplate();
 
     @Autowired
@@ -72,8 +64,6 @@ class FeatureEndToEndHttpTest {
         return "http://localhost:" + port + path;
     }
 
-    /** Same as authHeaders(), for the handful of tests that also need the email it minted -
-     *  confirming a destructive action means typing the account's own email back. */
     private record AuthedUser(HttpHeaders headers, String email) {
     }
 
@@ -95,12 +85,6 @@ class FeatureEndToEndHttpTest {
     void logsEditsSearchesAndDeletesATransactionThroughRealHttp() {
         HttpHeaders headers = authHeaders();
 
-        // Log a cash purchase via natural language would need a live AI provider - not what
-        // this test is for. Instead exercise edit/search/delete against the manual endpoint's
-        // sibling capabilities directly, using a transaction that manual entry would produce in
-        // production but constructing the HTTP calls that matter here: list, filter, edit,
-        // delete. We seed via a direct manual-entry call under the mock provider, which is
-        // deterministic and makes no network call.
         ResponseEntity<Map[]> manualResponse = rest.postForEntity(
                 url("/api/transactions/manual"),
                 new HttpEntity<>(Map.of("text", "lunch"), headers),
@@ -109,19 +93,16 @@ class FeatureEndToEndHttpTest {
         assertThat(manualResponse.getBody()).isNotEmpty();
         Number transactionId = (Number) manualResponse.getBody()[0].get("id");
 
-        // list
         ResponseEntity<Map[]> listed = rest.exchange(
                 url("/api/transactions"), HttpMethod.GET, new HttpEntity<>(headers), Map[].class);
         assertThat(listed.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(listed.getBody()).hasSize(1);
 
-        // filter - by a category that does not match, then one that does
         ResponseEntity<Map[]> noMatch = rest.exchange(
                 url("/api/transactions?category=DefinitelyNotARealCategory"),
                 HttpMethod.GET, new HttpEntity<>(headers), Map[].class);
         assertThat(noMatch.getBody()).isEmpty();
 
-        // edit
         Map<String, Object> update = Map.of(
                 "date", "2026-07-15",
                 "merchant", "Corrected Merchant",
@@ -135,17 +116,13 @@ class FeatureEndToEndHttpTest {
                 new HttpEntity<>(update, headers), Map.class);
         assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(updated.getBody().get("merchant")).isEqualTo("Corrected Merchant");
-        // Proves category is genuinely free text through the real validated endpoint, not
-        // just at the entity layer.
         assertThat(updated.getBody().get("category")).isEqualTo("MyOwnCategory");
 
-        // filtering by the new category now finds it
         ResponseEntity<Map[]> byNewCategory = rest.exchange(
                 url("/api/transactions?category=MyOwnCategory"),
                 HttpMethod.GET, new HttpEntity<>(headers), Map[].class);
         assertThat(byNewCategory.getBody()).hasSize(1);
 
-        // delete
         ResponseEntity<Void> deleted = rest.exchange(
                 url("/api/transactions/" + transactionId), HttpMethod.DELETE,
                 new HttpEntity<>(headers), Void.class);
@@ -186,7 +163,6 @@ class FeatureEndToEndHttpTest {
         assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(((Number) created.getBody().get("spent")).doubleValue()).isEqualTo(0.0);
 
-        // Re-posting the same category updates rather than duplicating.
         rest.postForEntity(
                 url("/api/budgets"),
                 new HttpEntity<>(Map.of("category", "groceries", "monthlyLimit", "3500.00"), headers),
@@ -230,10 +206,6 @@ class FeatureEndToEndHttpTest {
                 Map.class);
         assertThat(registered.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-        // Password registration requires clicking an emailed link before login works - not what
-        // this test is about, so the account is verified directly rather than standing up a
-        // real SMTP round trip. Everything above this line went through the real, validated
-        // /api/auth/register endpoint; only the verification step is bypassed.
         User user = userRepository.findByEmail(email).orElseThrow();
         assertThat(user.getDisplayName())
                 .as("stripped, the same way every other free-text field in this app is")
@@ -274,7 +246,6 @@ class FeatureEndToEndHttpTest {
         assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(updated.getBody().get("displayName")).isEqualTo("Renamed User");
 
-        // Not just an echo of the request body - confirms the row itself changed.
         User reloaded = userRepository.findByEmail((String) updated.getBody().get("email")).orElseThrow();
         assertThat(reloaded.getDisplayName()).isEqualTo("Renamed User");
     }
@@ -307,7 +278,6 @@ class FeatureEndToEndHttpTest {
                 new HttpEntity<>(Map.of("confirmationEmail", email), headers), Void.class);
         assertThat(cleared.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        // The account itself is untouched - still authorized, still has zero transactions.
         assertThat(rest.exchange(url("/api/transactions"), HttpMethod.GET, new HttpEntity<>(headers), Map[].class)
                 .getBody()).isEmpty();
     }

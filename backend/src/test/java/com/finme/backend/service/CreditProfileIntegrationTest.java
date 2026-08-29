@@ -19,14 +19,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/**
- * The credit module against a real database rather than mocked repositories.
- * <p>
- * Mocks cannot catch the failures that actually bite here: a column named after a reserved word,
- * a unique constraint that is declared but never created, or a "newest first" ordering that only
- * looks right because a mock returned a hand-sorted list. Those all appear at the persistence
- * boundary or not at all.
- */
 @SpringBootTest
 class CreditProfileIntegrationTest {
 
@@ -47,14 +39,11 @@ class CreditProfileIntegrationTest {
                 userId, account("Store Card", "1800.50", "3000.00", PaymentStatus.LATE));
 
         assertThat(profile.accounts()).hasSize(2);
-        // Ordered by name in the query, so the response is stable between requests rather than
-        // shuffling with insertion order.
         assertThat(profile.accounts()).extracting(CreditProfileResponse.CreditAccountResponse::accountName)
                 .containsExactly("Store Card", "Visa Gold");
 
         var visa = profile.accounts().stream()
                 .filter(a -> a.accountName().equals("Visa Gold")).findFirst().orElseThrow();
-        // Survives a real round trip at the declared scale - not a double that drifted.
         assertThat(visa.balance()).isEqualByComparingTo("4200.00");
         assertThat(visa.creditLimit()).isEqualByComparingTo("15000.00");
         assertThat(visa.paymentStatus()).isEqualTo(PaymentStatus.ON_TIME);
@@ -99,7 +88,6 @@ class CreditProfileIntegrationTest {
         assertThatThrownBy(() -> creditProfileService.deleteAccount(stranger, accountId))
                 .isInstanceOf(CreditAccountNotFoundException.class);
 
-        // And it is still there afterwards - the rejection was not a partial delete.
         assertThat(creditProfileService.getProfile(owner).accounts()).hasSize(1);
     }
 
@@ -115,8 +103,6 @@ class CreditProfileIntegrationTest {
         assertThatThrownBy(() -> creditProfileService.getProfile(userId))
                 .isInstanceOf(CreditProfileNotFoundException.class);
 
-        // A fresh profile must start empty. If the old rows survived, they would reappear here
-        // attached to the new profile the moment an id were reused.
         creditProfileService.createProfile(userId, null);
         CreditProfileResponse fresh = creditProfileService.getProfile(userId);
         assertThat(fresh.accounts()).isEmpty();
