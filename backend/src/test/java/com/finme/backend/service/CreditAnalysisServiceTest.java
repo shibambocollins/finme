@@ -138,8 +138,6 @@ class CreditAnalysisServiceTest {
 
     @Test
     void doesNotCallAProviderWhenThereIsNothingToAdviseOn() {
-        // Spending quota to be told "you have no accounts" is quota wasted on a sentence the
-        // app can write itself.
         givenAccounts();
         CreditAnalysisResponse response = serviceWith(new StubAiProvider()).analyse(USER);
 
