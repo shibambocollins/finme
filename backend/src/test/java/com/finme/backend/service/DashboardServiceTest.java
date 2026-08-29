@@ -44,7 +44,6 @@ class DashboardServiceTest {
         return t;
     }
 
-    /** Same as transaction(), but money coming in - a salary/deposit or a refund. */
     private static Transaction credit(LocalDate date, String merchant, String amount, String category) {
         Transaction t = transaction(date, merchant, amount, category);
         t.setDirection(TransactionDirection.CREDIT);
@@ -273,7 +272,6 @@ class DashboardServiceTest {
         when(transactionRepository.findByUserIdAndStatusOrderByDateDesc(1L, TransactionStatus.ACTIVE))
                 .thenReturn(List.of());
 
-        // JULY_20_2026 is the fixed clock this test class runs on.
         assertThat(dashboardService.getCalendar(1L, null).month()).isEqualTo("2026-07");
     }
 
