@@ -78,8 +78,6 @@ public class CreditAnalysisService {
         List<String> plan = List.of();
         String unavailable = null;
         if (utilization.overall() == null) {
-            // Nothing to advise on yet. Calling a provider to say so would spend quota to
-            // produce a sentence the app can write itself.
             unavailable = "Add a credit account to get a prioritised plan.";
         } else {
             try {
@@ -132,10 +130,6 @@ public class CreditAnalysisService {
                         + "credit score.");
     }
 
-    /**
-     * Current score against an earlier reading (FR-2.4.2). Defaults to the one immediately
-     * before it, which is the comparison a user means by "am I improving".
-     */
     @Transactional(readOnly = true)
     public ScoreComparisonResponse compareScores(Long userId, Long againstSnapshotId) {
         CreditProfile profile = requireProfile(userId);
@@ -158,8 +152,6 @@ public class CreditAnalysisService {
                 : history.stream()
                         .filter(s -> s.getId().equals(againstSnapshotId))
                         .findFirst()
-                        // Scoped to this profile's own history, so another user's snapshot id
-                        // cannot be compared against.
                         .orElseThrow(() -> new InvalidCreditDataException(
                                 "That earlier reading was not found in your history."));
 

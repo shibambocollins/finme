@@ -9,12 +9,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * Registered as a CorsConfigurationSource bean (not a WebMvcConfigurer) so Spring Security's
- * own CORS handling picks it up via HttpSecurity.cors(...) in SecurityConfig - a
- * WebMvcConfigurer-only registration would run too late to answer preflight OPTIONS requests
- * against endpoints the security filter chain already requires auth on.
- */
 @Configuration
 public class CorsConfig {
 

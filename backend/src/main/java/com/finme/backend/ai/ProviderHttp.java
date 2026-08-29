@@ -12,41 +12,26 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * One POST, with the provider's rate limit respected.
- * <p>
- * This is a single class because the AI package previously had four independent
- * {@code restClient.post()} call sites - text, vision, and both Cloudflare variants - and only
- * one of them knew anything about rate limits. That is exactly how the vision path ended up
- * without the retry behaviour the text path had: the fix was applied where the bug was seen,
- * and the three copies elsewhere were invisible. Collapsing them means the next lesson learned
- * about a provider's behaviour is learned once, everywhere.
+ * One POST, with the provider's rate limit respected - shared by every provider so the retry
+ * behaviour is applied everywhere the same way, not just where it was first needed.
  */
 final class ProviderHttp {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderHttp.class);
 
-    /** "Please try again in 4.282499999s" - the wait Groq reports inside its 429 body. */
     private static final Pattern RETRY_HINT = Pattern.compile("try again in ([0-9.]+)s");
     private static final Duration DEFAULT_RATE_LIMIT_WAIT = Duration.ofSeconds(20);
     private static final int MAX_RATE_LIMIT_RETRIES = 4;
 
     /**
-     * The longest wait this class will ever sleep through in one attempt. Discovered
-     * 2026-08-27: Groq enforces two independent 429 limits on two different clocks - a per-
-     * <b>minute</b> token budget (the one the rest of this class was built around, header
-     * {@code x-ratelimit-limit-tokens: 8000}, resets in well under a minute) and a separate
-     * per-<b>hour</b> request-count budget ({@code x-ratelimit-limit-requests: 1000}, seen
-     * resetting over an hour away). Every retry attempt is itself another request, so a chain
-     * of 429s can push an account toward the hourly ceiling even while comfortably under the
-     * token one - and when that happens, Groq's reported wait is tied to the slow clock, not
-     * the fast one. Measured live: a 480-row statement's 12th chunk was told to wait 638
-     * seconds - blowing past the frontend's own polling timeout for one chunk out of twelve.
-     * <p>
-     * Honouring an arbitrarily long wait defeats the fallback chain's entire purpose. The chain
-     * exists so that a provider having a bad day costs a handoff to the next one, not a stall -
-     * so a wait this class cannot honour quickly is treated as failure, not patience: the
-     * exception propagates immediately and FallbackAiProviderChain moves on to OpenRouter,
-     * which has its own, independent budget.
+     * The longest wait this class will ever sleep through in one attempt. Groq enforces two
+     * independent 429 limits on two different clocks - a fast per-minute token budget and a
+     * much slower per-hour request-count budget - and a chain of retries is itself a chain of
+     * requests, so it can trip the slow limit even while comfortably under the fast one. When
+     * that happens the reported wait can run into minutes. Honouring an arbitrarily long wait
+     * defeats the fallback chain's purpose - a provider having a bad day should cost a handoff,
+     * not a stall - so a wait longer than this is treated as failure: it propagates immediately
+     * and FallbackAiProviderChain moves on to a provider with its own, independent budget.
      */
     private static final Duration MAX_SINGLE_RATE_LIMIT_WAIT = Duration.ofSeconds(90);
 
@@ -61,13 +46,9 @@ final class ProviderHttp {
     }
 
     /**
-     * Posts the body, waiting and retrying when the provider says it is rate limited.
-     * <p>
-     * A 429 is not a failure - it is the provider saying "not yet". Measured on 2026-08-22,
-     * extracting an 80-transaction statement as 6 chunks put roughly 16,000 tokens through a
-     * free tier that allows 8000 per minute, so every chunk after the first came back 429
-     * within milliseconds and the upload failed having extracted 18 of 80 transactions. Groq
-     * states exactly how long to wait, so honouring that turns a hard failure into a pause.
+     * A 429 is not a failure - it's the provider saying "not yet", and it states exactly how
+     * long to wait, so honouring that turns a hard failure into a pause. A free tier's
+     * per-minute budget makes this routine on a multi-chunk statement, not an edge case.
      * <p>
      * Only 429 is retried. A 413 means this single request can never succeed as sent, so
      * retrying it would burn time before failing anyway - it propagates immediately, letting
@@ -112,11 +93,9 @@ final class ProviderHttp {
 
     /**
      * Prefers the standard Retry-After header; falls back to the wait embedded in the error
-     * body ("Please try again in 4.282499999s"), then to a fixed pause. A second is added to
-     * whatever is found, because resuming exactly on the boundary tends to race the provider's
-     * own window and 429 again.
+     * body, then to a fixed pause. A second is added to whatever is found, because resuming
+     * exactly on the boundary tends to race the provider's own window and 429 again.
      */
-    /** Package-private (not private) purely so ProviderHttpTest can exercise it directly. */
     static Duration retryAfter(HttpClientErrorException.TooManyRequests ex) {
         String header = ex.getResponseHeaders() == null ? null : ex.getResponseHeaders().getFirst("Retry-After");
         if (header != null) {

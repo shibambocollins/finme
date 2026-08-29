@@ -122,7 +122,6 @@ class AuthServiceTest {
         User result = authService.findOrCreateOAuthUser("has-a-name@example.com", "A Totally Different Google Name");
 
         assertThat(result.getDisplayName()).isEqualTo("The Name They Chose");
-        // Nothing changed (already verified, name preserved) - so no write was needed at all.
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -198,8 +197,6 @@ class AuthServiceTest {
 
         var captor = org.mockito.ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        // Stripped, the same way every other free-text input in this app is - a name that is
-        // only different by leading/trailing whitespace should not read as a different account.
         assertThat(captor.getValue().getDisplayName()).isEqualTo("Padded Name");
     }
 

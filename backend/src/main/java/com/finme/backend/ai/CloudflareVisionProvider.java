@@ -6,19 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Verified against the real API, 2026-08-18. Request shape confirmed working exactly as a
- * flagged Cloudflare docs GitHub issue (developers/cloudflare-docs#19185) described: "image" as
- * a JSON array of unsigned byte values (not base64), and "prompt" (not "messages") - correctly
- * extracted a real synthetic receipt's merchant/date/amount/paymentMethod in testing. Response
- * shape confirmed too: "result.response" is already a parsed JSON object matching our schema,
- * not a string to re-parse - see AiExtractionSupport.extractCloudflareResult.
+ * Request shape matches a flagged Cloudflare docs GitHub issue (developers/cloudflare-docs#19185),
+ * not the (wrong) published docs: "image" as a JSON array of unsigned byte values, not base64,
+ * and "prompt" rather than "messages". Response is parsed the same way as the text
+ * CloudflareProvider - see AiExtractionSupport.extractCloudflareResult.
  * <p>
- * One-time account gate discovered during testing, not code-fixable: this model requires
- * accepting Meta's license before first use - the API returns 403 "Model Agreement" until a
- * one-off {"prompt": "agree"} request is sent to this same model/account. Already done for
- * this project's Cloudflare account; a fresh account/model swap would need it repeated once.
- * Model defaults to @cf/meta/llama-3.2-11b-vision-instruct, a Cloudflare-hosted model, matching
- * the text CloudflareProvider's free-Neuron-allocation reasoning.
+ * This model requires accepting Meta's license before first use - the API returns 403 "Model
+ * Agreement" until a one-off {"prompt": "agree"} request is sent to this same model/account.
+ * Not code-fixable, and not a recurring issue once done; a fresh account or model swap would
+ * need it repeated once.
  */
 public class CloudflareVisionProvider implements VisionAiProvider {
 

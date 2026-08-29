@@ -29,9 +29,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * number and ID number never reach the "AI" call. That's the concrete check behind NFR-2 and
  * Test Plan Sec. 3.
  */
-// ai.provider is deliberately neither "mock" nor "chain" here, so MockAiProvider and the real
-// provider chain both stay inactive and CapturingAiProvider below is the sole AiProvider bean
-// - no @Primary needed, and no ambiguity against MockAiProvider's own @Primary.
 @SpringBootTest(properties = "ai.provider=test-capturing")
 class StatementIngestionIntegrationTest {
 
@@ -54,9 +51,6 @@ class StatementIngestionIntegrationTest {
             return new CapturingAiProvider();
         }
 
-        // ReceiptController -> ReceiptIngestionService needs a VisionAiProvider bean to exist
-        // for the full app context to load here; this test doesn't exercise the receipt flow
-        // at all, so a never-called stub is enough.
         @Bean
         VisionAiProvider stubVisionAiProvider() {
             return (imageBytes, mimeType) -> {

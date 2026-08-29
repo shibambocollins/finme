@@ -30,12 +30,9 @@ public class WeeklySpendAnalysisService {
         this.recommendationService = recommendationService;
     }
 
-    /** The finished email, or empty when this user has nothing worth writing about. */
     public Optional<WeeklySpendAnalysis> composeFor(Long userId) {
         SpendFacts facts = spendAnalysisService.factsFor(userId);
         if (facts.isEmpty()) {
-            // No spending recorded - an email reporting R0.00 is noise, and noise is how a
-            // weekly email becomes something people filter out.
             return Optional.empty();
         }
 
@@ -70,11 +67,6 @@ public class WeeklySpendAnalysisService {
         return text.toString();
     }
 
-    /**
-     * Written in words rather than as a bare signed number, because "you spent R1,353.45 more
-     * than last month" is the sentence someone actually reads, and the direction of a change is
-     * the part that is easiest to misread at a glance.
-     */
     private static String changeSentence(SpendFacts facts) {
         int direction = facts.changeAmount().signum();
         if (direction == 0) {
@@ -103,11 +95,6 @@ public class WeeklySpendAnalysisService {
         return String.format(Locale.ROOT, "R%,.2f", amount);
     }
 
-    /**
-     * @param subject line as sent
-     * @param body    plain text - matching the existing verification email rather than
-     *                introducing a templating engine for a second message type
-     */
     public record WeeklySpendAnalysis(String subject, String body) {
     }
 }

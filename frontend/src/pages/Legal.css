@@ -1,7 +1,3 @@
-/* Shared layout for Privacy.tsx and Terms.tsx - a plain, readable long-form document rather
-   than a marketing page. Reuses the app's tokens (paper, ink, forest, Hanken Grotesk) so it
-   doesn't look like a bolted-on legal template. */
-
 .legal-page {
   min-height: 100%;
   background: var(--paper);

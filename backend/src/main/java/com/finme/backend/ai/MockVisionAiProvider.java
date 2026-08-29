@@ -8,11 +8,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Deterministic stand-in for a real vision provider call - same role as MockAiProvider, same
- * ai.provider switch (mock/chain), so both chains switch together rather than needing two
- * separate toggles.
- */
 @Component
 @Primary
 @ConditionalOnProperty(name = "ai.provider", havingValue = "mock", matchIfMissing = true)

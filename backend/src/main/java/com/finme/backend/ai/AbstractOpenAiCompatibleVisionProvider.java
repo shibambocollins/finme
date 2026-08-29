@@ -8,21 +8,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Groq and OpenRouter's vision models both accept the same OpenAI-compatible multi-part
- * content shape (a text block plus an image_url block) - verified against current docs, not
- * assumed, same as the text AbstractOpenAiCompatibleProvider this mirrors.
+ * Groq and OpenRouter's vision models both accept the same OpenAI-compatible multi-part content
+ * shape (a text block plus an image_url block), same as the text
+ * AbstractOpenAiCompatibleProvider this mirrors.
  */
 abstract class AbstractOpenAiCompatibleVisionProvider implements VisionAiProvider {
 
     /**
-     * A receipt yields exactly one transaction, so the answer is small and a fixed budget is
-     * enough - unlike statement extraction, nothing here scales with input size.
-     * <p>
-     * It is set explicitly all the same, because leaving it unset is what broke the text path:
-     * Groq then applies its own 2048 default, and a reasoning model can spend nearly all of
-     * that thinking before writing any JSON. 2000 leaves ample room for one transaction while
-     * staying small against the 8000 tokens-per-minute free-tier ceiling, which the image's own
-     * prompt tokens also draw on.
+     * A receipt yields exactly one transaction, so a small fixed budget is enough - unlike
+     * statement extraction, nothing here scales with input size. Set explicitly rather than left
+     * unset, since an unset budget is what let a reasoning model burn its whole allowance
+     * "thinking" before writing any JSON on the text path (see GroqProvider).
      */
     private static final int RECEIPT_COMPLETION_TOKENS = 2000;
 
@@ -39,7 +35,6 @@ abstract class AbstractOpenAiCompatibleVisionProvider implements VisionAiProvide
         this.providerName = providerName;
     }
 
-    /** Provider-specific request fields merged into the body. Empty by default. */
     protected Map<String, Object> extraRequestFields() {
         return Map.of();
     }

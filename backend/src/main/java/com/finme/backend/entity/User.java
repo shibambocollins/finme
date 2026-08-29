@@ -26,33 +26,18 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    /**
-     * What the UI shows instead of the email address (registration asks for it directly; a
-     * Google login backfills it from the account's OAuth profile name - see
-     * AuthService.findOrCreateOAuthUser). Called displayName rather than "username" on purpose:
-     * this app authenticates by email, not a separate username, and naming this field
-     * "username" would suggest a second login identifier that does not exist.
-     * <p>
-     * Nullable for the handful of accounts that predate this field, not because a new account
-     * can end up without one - registration requires it and OAuth backfills it.
-     */
     @Column(name = "display_name")
     private String displayName;
 
-    // Nullable - a user who only ever logged in via Google OAuth has no password of their own.
     @Column(name = "password_hash")
     private String passwordHash;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    // Google OAuth accounts are verified at creation (Google already proved ownership).
-    // Password accounts start unverified until the emailed link is clicked.
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
-    // Single-use, short-lived, cleared once verified - not hashed like a password, since the
-    // risk model (single-use, 24h expiry) is different from a long-lived credential.
     @Column(name = "verification_token")
     private String verificationToken;
 

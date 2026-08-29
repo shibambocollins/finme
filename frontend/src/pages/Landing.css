@@ -1,6 +1,3 @@
-/* Public marketing page. Reuses the shared tokens/buttons/tags/disclaimer from App.css; this
-   file only holds the section-level layout that has no equivalent in the authenticated app. */
-
 .landing {
   max-width: 100%;
   overflow-x: hidden;

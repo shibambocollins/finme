@@ -88,7 +88,6 @@ class CreditProfileServiceTest {
 
     @Test
     void acceptsADifferentBureauAndScale() {
-        // FR-2.1.4 exists so another bureau needs configuration, not a schema change.
         when(profileRepository.existsByUserId(USER)).thenReturn(false);
         when(profileRepository.save(any(CreditProfile.class))).thenAnswer(i -> {
             CreditProfile p = i.getArgument(0);
@@ -116,8 +115,6 @@ class CreditProfileServiceTest {
 
     @Test
     void reportsARacedSecondCreateAsAConflictRatherThanAServerError() {
-        // Two concurrent requests both pass the existsByUserId check; the unique constraint
-        // catches the loser. A 500 here would blame the user for a race they cannot see.
         when(profileRepository.existsByUserId(USER)).thenReturn(false);
         when(profileRepository.save(any(CreditProfile.class)))
                 .thenThrow(new DataIntegrityViolationException("unique constraint"));
@@ -137,8 +134,6 @@ class CreditProfileServiceTest {
 
     @Test
     void deletingAProfileAlsoRemovesItsAccountsAndSnapshots() {
-        // These are linked by a plain id column, not a JPA association, so nothing cascades -
-        // orphans would outlive the profile and reattach if the id were ever reused.
         CreditProfile p = profile(10L, USER, 740);
         givenProfile(p);
         when(snapshotRepository.findByCreditProfileIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -197,8 +192,6 @@ class CreditProfileServiceTest {
 
     @Test
     void refusesToTouchAnAccountBelongingToAnotherUsersProfile() {
-        // The id alone says nothing about ownership. Without this check, guessing a sequential
-        // id would edit a stranger's credit account.
         CreditProfile mine = profile(10L, USER, 740);
         givenProfile(mine);
 
@@ -217,7 +210,6 @@ class CreditProfileServiceTest {
 
     @Test
     void reportsAnUnknownAccountAndAnUnownedOneIdentically() {
-        // Same 404 for both, so sequential ids cannot be probed to learn what exists.
         CreditProfile mine = profile(10L, USER, 740);
         givenProfile(mine);
         when(accountRepository.findById(123L)).thenReturn(Optional.empty());

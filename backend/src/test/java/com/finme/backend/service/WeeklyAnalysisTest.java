@@ -111,8 +111,6 @@ class WeeklyAnalysisTest {
 
     @Test
     void writesTheDirectionOfChangeInWords() {
-        // "spent less" is the part a reader takes in at a glance; a signed number is easy to
-        // misread, and reading a decrease as an increase is the wrong way round to be wrong.
         givenTransactions(1L,
                 debit(LocalDate.of(2026, 7, 2), "300.00", "Groceries"),
                 debit(LocalDate.of(2026, 6, 2), "500.00", "Groceries"));
@@ -187,8 +185,6 @@ class WeeklyAnalysisTest {
 
     @Test
     void oneUsersFailureDoesNotStopTheRest() {
-        // The failure that matters most in a batch job. Unguarded, the first bad user cancels
-        // everyone after them - and which users those are depends only on iteration order.
         WeeklySpendAnalysisService service = mock(WeeklySpendAnalysisService.class);
         when(userRepository.findByEmailVerifiedTrue()).thenReturn(List.of(
                 user(1L, "first@example.com"),

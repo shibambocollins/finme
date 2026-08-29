@@ -11,22 +11,12 @@ const NAV_ITEMS: { to: string; label: string; key: ActivePage }[] = [
   { to: "/credit", label: "Credit", key: "credit" },
 ];
 
-/**
- * Shared nav shell for every authenticated screen. Below the mobile breakpoint the inline nav
- * and profile link (desktop-only) are replaced by a hamburger button opening a slide-out
- * drawer with the same links - the flex-wrap it used to fall back to just looked cramped on a
- * narrow screen rather than actually being usable.
- */
 export function AppHeader({ active }: { active: ActivePage }) {
   const { email, displayName } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  // Falls back to email only for an account that predates displayName, or a stored session from
-  // before that field existed - registration and Google login both set it now.
   const name = displayName || email || "";
 
-  // Closes the drawer on every navigation, not only a click on a link inside it - covers
-  // browser back/forward too, where nothing inside the drawer ever gets clicked.
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
@@ -59,8 +49,6 @@ export function AppHeader({ active }: { active: ActivePage }) {
           ))}
         </nav>
 
-        {/* Logout lives on the Settings page now, alongside other account actions, rather than
-            sitting in the header as the one thing you could do with your identity. */}
         <Link
           to="/settings"
           className={`app-header__profile app-header__profile--desktop${active === "settings" ? " active" : ""}`}

@@ -25,14 +25,9 @@ import java.util.List;
  * Manages the credit profile, its accounts, and its score history (FR-2.1.1 to FR-2.1.4,
  * FR-2.4.1).
  * <p>
- * No arithmetic on credit figures happens here. Utilization is FR-2.2.1 and arrives in Iteration
- * 9 as deterministic code; this iteration is strictly about getting accurate data in and back
- * out again, because a calculation over wrong inputs is worse than no calculation at all.
- * <p>
- * Every method takes the caller's userId and resolves the profile from it. No method accepts a
- * profile id from the client, so there is no path where one user reaches another user's credit
- * data by supplying an id - the ownership check cannot be forgotten because it is the only way
- * in.
+ * No arithmetic on credit figures happens here. Utilization is FR-2.2.1 and arrives as
+ * deterministic code; this service is strictly about getting accurate data in and back out
+ * again, because a calculation over wrong inputs is worse than no calculation at all.
  */
 @Service
 public class CreditProfileService {
@@ -70,8 +65,6 @@ public class CreditProfileService {
         try {
             profile = creditProfileRepository.save(profile);
         } catch (DataIntegrityViolationException ex) {
-            // The unique constraint on user_id caught a second create that raced the check
-            // above. Reported as the conflict it is, not as a 500.
             throw new CreditProfileAlreadyExistsException();
         }
         return toResponse(profile);
@@ -87,12 +80,6 @@ public class CreditProfileService {
         return creditProfileRepository.existsByUserId(userId);
     }
 
-    /**
-     * Removes the profile and everything under it. Deliberately explicit rather than relying on
-     * JPA cascades: the child rows are linked by a plain id column, not a mapped association, so
-     * nothing would delete them automatically and the orphans would silently outlive the profile
-     * - and reappear attached to a new profile if the id were ever reused.
-     */
     @Transactional
     public void deleteProfile(Long userId) {
         CreditProfile profile = requireProfile(userId);
@@ -142,11 +129,6 @@ public class CreditProfileService {
                 request.paymentStatus() == null ? PaymentStatus.UNKNOWN : request.paymentStatus());
     }
 
-    /**
-     * Loads an account only if it belongs to this profile. Without the ownership check, an
-     * account id from another user's profile would be updated or deleted quite happily - the id
-     * alone says nothing about who owns it.
-     */
     private CreditAccount requireOwnedAccount(CreditProfile profile, Long accountId) {
         return creditAccountRepository.findById(accountId)
                 .filter(account -> account.getCreditProfileId().equals(profile.getId()))

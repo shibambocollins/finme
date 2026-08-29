@@ -52,10 +52,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  * The fixture is a 16-transaction statement with known ground truth, deliberately including a
  * salary credit and a refund - the two rows that expose whether "total spend" is really spend.
  */
-// src/test/resources/application.properties shadows the main one entirely and defines none of
-// the provider keys, so ai.provider=chain alone cannot resolve them - each is pulled straight
-// from the environment here (i.e. from backend/.env, via run-dev.sh's export or the IDE's
-// envFile), with the same defaults the main properties file uses.
 @SpringBootTest(properties = {
         "ai.provider=chain",
         "groq.api-key=${GROQ_API_KEY:}",
@@ -350,7 +346,6 @@ class LiveExtractionSmokeTest {
 
     private static final Pattern FIGURE = Pattern.compile("\\d[\\d.]*");
 
-    /** A small two-month spread, so there is a real month-over-month change to narrate. */
     private void seedSpendingFor(long userId) {
         record Row(LocalDate date, String merchant, String amount, String category) {
         }
@@ -378,11 +373,6 @@ class LiveExtractionSmokeTest {
         }
     }
 
-    /**
-     * The receipt pipeline against real vision providers. Until this existed it was the only
-     * path in the app never run outside mocks - every receipt test used a stub, so a provider
-     * returning nothing usable would have gone unnoticed until a user hit it.
-     */
     @Test
     void extractsAReceiptViaTheRealVisionChain() throws IOException, InterruptedException {
         long userId = 990004L;
@@ -413,12 +403,6 @@ class LiveExtractionSmokeTest {
 
     private static final java.math.BigDecimal RECEIPT_TOTAL = new java.math.BigDecimal("247.85");
 
-    /**
-     * A synthetic till slip, rendered rather than photographed. It is deliberately clean - the
-     * point is to prove the pipeline works end to end against real providers, not to claim
-     * anything about accuracy on a crumpled, badly-lit thermal receipt. Measuring that is the
-     * evaluation harness's job, with real photos.
-     */
     private static byte[] buildReceiptImage() throws IOException {
         int width = 620;
         int height = 780;
@@ -467,11 +451,6 @@ class LiveExtractionSmokeTest {
         return out.toByteArray();
     }
 
-    /**
-     * Manual entry against real providers (FR-1.5.1, FR-1.5.2). A fixed reference date is passed
-     * in rather than the system clock, so the relative-date assertion is deterministic and does
-     * not depend on when the suite runs.
-     */
     @Test
     void parsesPlainLanguageSpendingViaTheRealChain() {
         LocalDate reference = LocalDate.of(2026, 7, 20);

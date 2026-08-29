@@ -1,17 +1,9 @@
-/*
- * Design tokens, ported from the FinMe Foundations reference (colour, type, controls, states -
- * see docs/ for the product rules these serve). Warm paper ground, forest/sage greens, clay as
- * the only alert colour. Hanken Grotesk for everything human, JetBrains Mono for everything
- * machine-read (money, dates, labels).
- */
 :root {
-  /* Surfaces */
   --paper: #fbfaf7;
   --paper-alt: #fcfbf7;
   --card: #ffffff;
   --stone: #f1efe8;
 
-  /* Ink - body text down to captions */
   --ink: #14140f;
   --ink-70: #2e2d26;
   --ink-60: #5c5b52;
@@ -19,19 +11,16 @@
   --ink-40: #8a8779;
   --ink-30: #a8a497;
 
-  /* Rules & input borders */
   --line: #e3e1d9;
   --line-strong: #dcd9cf;
   --input-border: #c9c5b8;
 
-  /* Forest - primary action, positive data, the only two greens in the palette */
   --forest: #12503a;
   --forest-deep: #0a3527;
   --forest-wash: #e4eee7;
   --forest-border: #bfd6c8;
   --sage: #7d8b6a;
 
-  /* Clay - the only alert colour. Never appears alone; always paired with a word or a symbol. */
   --clay: #a65d3a;
   --clay-deep: #7a3f24;
   --clay-wash: #fbf3ee;

@@ -18,15 +18,6 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Turns every failure into the same JSON shape.
- * <p>
- * The handlers below the first two exist because anything not handled here falls through to
- * Spring's default {@code /error} page, which returns a differently-shaped body - so a client
- * reading {@code message} gets nothing, and the user sees a blank or generic failure. These are
- * the everyday ways a request goes wrong: a file over the size limit, a malformed JSON body, a
- * missing form field. Each deserves a sentence saying what to do, not a stack trace or silence.
- */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -48,10 +39,6 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), "Validation failed: " + fieldErrors));
     }
 
-    /**
-     * Spring's own message names a byte limit and the servlet container; the configured limit is
-     * what the user needs, in the unit they think in.
-     */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> handleTooLarge(MaxUploadSizeExceededException ex) {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
@@ -60,7 +47,6 @@ public class GlobalExceptionHandler {
                                 + "period, or a smaller photo."));
     }
 
-    /** No file part at all - typically a form posted without choosing a file. */
     @ExceptionHandler(MissingServletRequestPartException.class)
     public ResponseEntity<ErrorResponse> handleMissingPart(MissingServletRequestPartException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -75,7 +61,6 @@ public class GlobalExceptionHandler {
                         "Missing required parameter: " + ex.getParameterName()));
     }
 
-    /** Malformed or empty JSON body. The parser's own message leaks internal type names. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -103,16 +88,6 @@ public class GlobalExceptionHandler {
                         "Something went wrong on our side. Please try again."));
     }
 
-    /**
-     * timestamp is a pre-formatted ISO-8601 String, not an Instant, and that is deliberate.
-     * <p>
-     * Serializing an Instant threw InvalidDefinitionException ("Java 8 date/time type not
-     * supported by default") at the moment the error body was being written - for every error
-     * this application produced. The HTTP status had already been committed by then, so callers
-     * received a status code with an empty body and no explanation; an upload that failed
-     * looked to the browser like it returned nothing at all. Formatting here removes the
-     * dependency on which Jackson version is active and which date modules it has registered.
-     */
     public record ErrorResponse(int status, String message, String timestamp) {
 
         public static ErrorResponse of(int status, String message) {

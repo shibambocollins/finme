@@ -40,11 +40,6 @@ public class ManualEntryService {
     private final AiProvider aiProvider;
     private final Clock clock;
 
-    /**
-     * The clock is injected so "today" is a value this service is given rather than one it reads
-     * from the environment - which is what lets tests assert on relative-date handling
-     * ("yesterday") deterministically instead of hoping the suite does not run near midnight.
-     */
     public ManualEntryService(TransactionRepository transactionRepository, AiProvider aiProvider, Clock clock) {
         this.transactionRepository = transactionRepository;
         this.aiProvider = aiProvider;
@@ -83,7 +78,6 @@ public class ManualEntryService {
         Transaction transaction = new Transaction();
         transaction.setUserId(userId);
         transaction.setSourceType(SourceType.MANUAL);
-        // No sourceId: a manual entry has no uploaded document behind it to point at.
         transaction.setDate(et.date() == null ? today : et.date());
         transaction.setMerchant(et.merchant());
         transaction.setAmount(et.amount());

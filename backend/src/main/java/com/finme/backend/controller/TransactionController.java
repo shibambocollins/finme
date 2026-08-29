@@ -42,11 +42,6 @@ public class TransactionController {
         this.authenticatedUser = authenticatedUser;
     }
 
-    /**
-     * Every filter is optional and additive. Filtering happens over the user's own transactions
-     * only - the same ownership scoping every other endpoint in this app uses, so there is no
-     * parameter combination that reaches another user's data.
-     */
     @GetMapping
     public List<TransactionResponse> list(
             @RequestParam(required = false) String category,
@@ -62,11 +57,6 @@ public class TransactionController {
                 .toList();
     }
 
-    /**
-     * Logs spending described in plain language (FR-1.5.1). Synchronous, unlike statement
-     * upload: this is one short sentence and one provider call, and the user is waiting to see
-     * the transaction they just described appear.
-     */
     @PostMapping("/manual")
     public ResponseEntity<List<TransactionResponse>> logManualEntry(@Valid @RequestBody ManualEntryRequest request) {
         List<TransactionResponse> created =
@@ -76,7 +66,6 @@ public class TransactionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    /** Corrects a miscategorised or wrong-amount extraction. Every field must be resent. */
     @PutMapping("/{id}")
     public TransactionResponse update(@PathVariable Long id, @Valid @RequestBody UpdateTransactionRequest request) {
         return TransactionResponse.from(

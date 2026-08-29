@@ -3,14 +3,6 @@ import { Link } from "react-router-dom";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import "./Landing.css";
 
-/**
- * Public marketing page. No API calls anywhere on this page - everything shown is fixed sample
- * data, clearly marked as such in the footer, so a logged-out visitor never sees a hint of
- * needing to be authenticated to view it. Real behaviour (redaction, deterministic math, the
- * credit disclaimer, free-text categories) is described only where it matches how the
- * authenticated app actually works - see Dashboard.tsx, Budgets.tsx, Credit.tsx.
- */
-
 const formatR = (n: number) => {
   const neg = n < 0;
   const [whole, cents] = Math.abs(n).toFixed(2).split(".");
@@ -107,8 +99,6 @@ const CREDIT_ACCOUNTS = [
   { name: "Store account", bal: 2310, limit: 6000 },
 ];
 
-// Shown by default before "View all" - long enough to cover the trust/privacy questions people
-// actually arrive with, short enough that the section doesn't read as a wall of text.
 const FAQ_PREVIEW_COUNT = 6;
 
 const FAQS = [

@@ -38,19 +38,12 @@ public class BankStatement {
     @Column(nullable = false)
     private StatementStatus status = StatementStatus.PROCESSING;
 
-    /**
-     * Chunk progress, so a client polling a PROCESSING statement can show real movement rather
-     * than an indefinite spinner. A large statement is deliberately paused partway through to
-     * respect provider rate limits, and without progress that pause is indistinguishable from
-     * the app having hung - which is exactly how it was experienced.
-     */
     @Column(name = "total_chunks")
     private Integer totalChunks;
 
     @Column(name = "processed_chunks")
     private Integer processedChunks;
 
-    /** Why a FAILED statement failed, in the user's response rather than only in the server log. */
     @Column(name = "failure_reason", length = 512)
     private String failureReason;
 }

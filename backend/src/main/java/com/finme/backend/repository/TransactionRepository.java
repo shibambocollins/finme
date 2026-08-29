@@ -25,7 +25,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             LocalDate startDate,
             LocalDate endDate);
 
-    /** Bulk removal for "clear my data" / account deletion (UserService) - every other delete
-     *  path in this app removes one owned row at a time; this is the one deliberate exception. */
     void deleteByUserId(Long userId);
 }

@@ -13,14 +13,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Lets a user correct or remove a transaction, and search/filter their own list.
- * <p>
- * Filtering is done in Java over one repository fetch, matching how DashboardService and
- * SpendAnalysisService already work in this codebase - a personal finance app's transaction
- * count is small enough that a second SQL query per filter combination would be complexity
- * without a measurable benefit.
- */
 @Service
 public class TransactionService {
 
@@ -30,14 +22,6 @@ public class TransactionService {
         this.transactionRepository = transactionRepository;
     }
 
-    /**
-     * @param category   exact match, case-insensitive - null/blank means "any category"
-     * @param sourceType null means "any source"
-     * @param direction  null means "any direction"
-     * @param from       inclusive lower bound on date, null means unbounded
-     * @param to         inclusive upper bound on date, null means unbounded
-     * @param query      case-insensitive substring match against merchant or description
-     */
     public List<Transaction> search(Long userId, String category, SourceType sourceType,
                                     TransactionDirection direction, LocalDate from, LocalDate to,
                                     String query) {

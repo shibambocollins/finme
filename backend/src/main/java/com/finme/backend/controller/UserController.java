@@ -13,12 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * The signed-in user's own profile and data. Deliberately not under /api/auth - that prefix is
- * entirely permitAll in SecurityConfig (register/login/verify have to be reachable before a
- * token exists), and these must never accidentally inherit that. /api/users/** falls under the
- * default anyRequest().authenticated() rule instead, same as every other domain controller.
- */
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -36,8 +30,6 @@ public class UserController {
         return userService.updateDisplayName(authenticatedUser.currentUserId(), request);
     }
 
-    /** Keeps the account and login; removes every transaction, statement, receipt, budget, and
-     *  the credit profile if one exists. */
     @DeleteMapping("/me/data")
     public ResponseEntity<Void> clearFinancialData(@Valid @RequestBody ConfirmAccountActionRequest request) {
         userService.clearFinancialData(authenticatedUser.currentUserId(), request);

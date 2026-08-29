@@ -15,18 +15,13 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/**
- * Full schema from docs/03-system-design.md Sec. 3. sourceId/supersededBy exist now so
- * receipt ingestion and duplicate detection (later iterations) don't need a schema change -
- * this iteration only ever writes sourceType=STATEMENT, status=ACTIVE, supersededBy=null.
- */
 @Entity
 @Table(name = "transactions")
 @Getter
 @Setter
 @NoArgsConstructor
 public class Transaction {
- 
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -58,11 +53,6 @@ public class Transaction {
     @Column(name = "payment_method", nullable = false)
     private PaymentMethod paymentMethod = PaymentMethod.UNKNOWN;
 
-    /**
-     * Defaults to DEBIT so rows written before this column existed, and any extraction where
-     * the AI omits the field, are treated as spending - the safe reading for a finance app,
-     * since under-reporting spend is the more misleading error.
-     */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TransactionDirection direction = TransactionDirection.DEBIT;

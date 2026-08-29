@@ -90,7 +90,6 @@ class DocumentValidationTest {
         return new ReceiptIngestionService(receiptRepository, transactionRepository, visionAiProvider);
     }
 
-    /** A PDF containing pages but no text - what a scanned statement actually looks like. */
     private static byte[] pdfWithNoText() throws IOException {
         try (PDDocument document = new PDDocument()) {
             document.addPage(new PDPage());
@@ -110,7 +109,6 @@ class DocumentValidationTest {
                 .isInstanceOf(InvalidStatementFileException.class)
                 .hasMessageContaining("not a PDF");
 
-        // Rejected before a statement row exists, so no FAILED record is left behind.
         verify(bankStatementRepository, never()).save(any());
     }
 

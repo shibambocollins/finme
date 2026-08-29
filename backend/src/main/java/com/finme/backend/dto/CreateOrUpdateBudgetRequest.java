@@ -8,11 +8,6 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-/**
- * Sets or changes a monthly budget for one category. Posting a category that already has a
- * budget updates its limit rather than erroring - there is no reason to make "change your
- * Groceries budget from 3000 to 3500" a two-step delete-then-recreate.
- */
 public record CreateOrUpdateBudgetRequest(
         @NotBlank(message = "Category is required")
         @Size(max = 60, message = "Category is too long")

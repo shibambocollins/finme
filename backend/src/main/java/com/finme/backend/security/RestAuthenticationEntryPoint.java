@@ -27,12 +27,6 @@ import java.time.Instant;
 @Component
 public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-    /**
-     * A plain mapper is enough here now that ErrorResponse carries a pre-formatted String
-     * timestamp rather than an Instant - see GlobalExceptionHandler.ErrorResponse for why that
-     * matters. Injecting Spring's mapper is not an option: this application runs on a Jackson
-     * version that publishes no com.fasterxml.jackson ObjectMapper bean at all.
-     */
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
