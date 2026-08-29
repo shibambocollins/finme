@@ -13,7 +13,7 @@ import { useDocumentTitle } from "../hooks/useDocumentTitle";
  * the dashboard - a Google login didn't just verify an email, so it never shows this message.
  */
 export function AuthCallback() {
-  useDocumentTitle("Signing you in… — FinMe");
+  useDocumentTitle("Signing you in… | FinMe");
   const { completeOAuthLogin } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

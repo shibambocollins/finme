@@ -15,7 +15,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export function Login() {
-  useDocumentTitle("Log in — FinMe");
+  useDocumentTitle("Log in | FinMe");
   const { login } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

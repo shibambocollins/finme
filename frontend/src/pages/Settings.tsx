@@ -100,7 +100,7 @@ function DangerAction({
 }
 
 export function Settings() {
-  useDocumentTitle("Settings — FinMe");
+  useDocumentTitle("Settings | FinMe");
   const { token, email, displayName, updateDisplayName, logout } = useAuth();
   const navigate = useNavigate();
   const [nameInput, setNameInput] = useState(displayName ?? "");

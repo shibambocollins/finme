@@ -19,7 +19,7 @@ interface BudgetStatus {
 const EMPTY_FORM = { category: "", monthlyLimit: "" };
 
 export function Budgets() {
-  useDocumentTitle("Budgets — FinMe");
+  useDocumentTitle("Budgets | FinMe");
   const { token } = useAuth();
   const [budgets, setBudgets] = useState<BudgetStatus[]>([]);
   const [loading, setLoading] = useState(true);

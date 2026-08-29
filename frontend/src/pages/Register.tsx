@@ -12,7 +12,7 @@ interface MessageResponse {
 }
 
 export function Register() {
-  useDocumentTitle("Create your account — FinMe");
+  useDocumentTitle("Create your account | FinMe");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

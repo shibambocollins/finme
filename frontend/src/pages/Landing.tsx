@@ -107,6 +107,10 @@ const CREDIT_ACCOUNTS = [
   { name: "Store account", bal: 2310, limit: 6000 },
 ];
 
+// Shown by default before "View all" - long enough to cover the trust/privacy questions people
+// actually arrive with, short enough that the section doesn't read as a wall of text.
+const FAQ_PREVIEW_COUNT = 6;
+
 const FAQS = [
   {
     q: "Is FinMe a bank?",
@@ -163,6 +167,10 @@ const FAQS = [
     a: "Yes, either one, any time - from Settings. “Clear my data” removes every transaction, statement, receipt, budget and credit profile but keeps your login; “Delete my account” removes the account and everything in it, permanently. Both ask you to type your email to confirm, since neither can be undone.",
   },
   {
+    q: "I registered but never got the verification email. What happened?",
+    a: "Most likely it was filtered, not lost - check spam or junk first. This is more common with university, work, or government email addresses, which often filter harder than personal email. Registering again with a personal address (Gmail, Outlook, and similar) is currently the more reliable option.",
+  },
+  {
     q: "What happens if there's a security incident?",
     a: (
       <>
@@ -176,13 +184,14 @@ const FAQS = [
 ];
 
 export function Landing() {
-  useDocumentTitle("FinMe — Track spending & credit health");
+  useDocumentTitle("FinMe | Track spending & credit health");
   const [source, setSource] = useState<SourceId>("statement");
   const [cashText, setCashText] = useState("lunch R150 cash today");
   const [demoStatus, setDemoStatus] = useState<"idle" | "running" | "done">("idle");
   const [demoPct, setDemoPct] = useState(0);
   const [day, setDay] = useState(21);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [faqExpanded, setFaqExpanded] = useState(false);
   const [simAccount, setSimAccount] = useState(0);
   const [simBalance, setSimBalance] = useState(3500);
   const intervalRef = useRef<number | null>(null);
@@ -793,7 +802,7 @@ export function Landing() {
         <div className="landing-inner landing-inner--narrow">
           <h2 style={{ marginBottom: 32 }}>Questions people ask.</h2>
           <div>
-            {FAQS.map((f, i) => (
+            {(faqExpanded ? FAQS : FAQS.slice(0, FAQ_PREVIEW_COUNT)).map((f, i) => (
               <div className="landing-faq-item" key={f.q}>
                 <button type="button" aria-expanded={openFaq === i} onClick={() => setOpenFaq(openFaq === i ? null : i)}>
                   <span>{f.q}</span>
@@ -804,6 +813,13 @@ export function Landing() {
             ))}
             <div style={{ borderTop: "1px solid var(--line-strong)" }} />
           </div>
+          {FAQS.length > FAQ_PREVIEW_COUNT && (
+            <div style={{ textAlign: "center", marginTop: 28 }}>
+              <button type="button" className="btn-quiet" onClick={() => setFaqExpanded((e) => !e)}>
+                {faqExpanded ? "Show fewer questions" : `View all ${FAQS.length} questions`}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
