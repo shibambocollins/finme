@@ -14,11 +14,6 @@ import lombok.Setter;
 
 import java.time.Instant;
 
-/**
- * Deliberately no image_reference field despite docs/03-system-design.md mentioning one -
- * BankStatement doesn't persist the PDF either (processed transiently, no Azure Blob Storage
- * wiring exists yet in this codebase). Matches that existing precedent, not a new gap.
- */
 @Entity
 @Table(name = "receipts")
 @Getter
