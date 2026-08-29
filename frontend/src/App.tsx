@@ -16,8 +16,6 @@ import { NotFound } from "./pages/NotFound";
 import { CookieBanner } from "./components/CookieBanner";
 import "./App.css";
 
-/** The public marketing page at "/" for a logged-out visitor; a signed-in one goes straight to
- *  the dashboard instead of seeing sample data for an app they're already inside. */
 function RootRoute() {
   const { token } = useAuth();
   return token ? <Navigate to="/dashboard" replace /> : <Landing />;
@@ -73,9 +71,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-        {/* Catch-all - must stay last. Anything that doesn't match a real route above (a typo,
-            a stale bookmark, a removed page) gets an explicit "not found" instead of a blank
-            screen. */}
         <Route path="*" element={<NotFound />} />
       </Routes>
       <CookieBanner />
