@@ -43,10 +43,8 @@ interface BankStatementResponse {
   id: number;
   uploadDate: string;
   status: "PROCESSING" | "COMPLETE" | "FAILED";
-  /** Chunk progress while PROCESSING - null until extraction has started. */
   totalChunks: number | null;
   processedChunks: number | null;
-  /** Populated only when status is FAILED. */
   failureReason: string | null;
 }
 
@@ -64,11 +62,9 @@ interface DashboardSummary {
 
 interface RecommendationsResponse {
   recommendations: string[];
-  /** Non-null when the list is empty and there is a reason worth showing the user. */
   unavailableReason: string | null;
 }
 
-/** Mirrors backend/UpdateTransactionRequest - every field is required by the API on save. */
 interface TransactionEditForm {
   date: string;
   merchant: string;
@@ -79,7 +75,7 @@ interface TransactionEditForm {
   paymentMethod: PaymentMethod;
 }
 
-const ACCENT = "#12503a"; // --forest, kept as a literal hex since recharts props take real colours, not CSS vars
+const ACCENT = "#12503a";
 const PAYMENT_METHODS: PaymentMethod[] = ["CASH", "CARD", "UNKNOWN"];
 const EMPTY_EDIT_FORM: TransactionEditForm = {
   date: "",
@@ -91,9 +87,6 @@ const EMPTY_EDIT_FORM: TransactionEditForm = {
   paymentMethod: "UNKNOWN",
 };
 
-/** "2026-08" -> "Aug" - the trend axis reads across a handful of recent months, where the year
- *  is implied and just adds noise; the month-over-month comparison line above it still says the
- *  full previous-month name for anyone who needs the year disambiguated. */
 const formatMonthShort = (month: string): string => {
   const [year, m] = month.split("-").map(Number);
   return new Date(year, m - 1, 1).toLocaleDateString(undefined, { month: "short" });
@@ -123,10 +116,6 @@ export function Dashboard() {
   const [loggingManual, setLoggingManual] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Transaction search/filter - applied client-side over the already-loaded list. The backend
-  // exposes the same filters as query parameters (used by the Calendar page's day drill-down,
-  // where a fresh scoped fetch is the better fit); here the whole list is already in memory, so
-  // a second round trip would only add latency for no benefit.
   const [filterCategory, setFilterCategory] = useState("");
   const [filterSourceType, setFilterSourceType] = useState("");
   const [filterDirection, setFilterDirection] = useState("");
@@ -138,9 +127,6 @@ export function Dashboard() {
   const [editForm, setEditForm] = useState<TransactionEditForm>(EMPTY_EDIT_FORM);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Purely a client-side window over the trend series already fetched for the chart - the
-  // backend returns the whole history in one call, so "3 months" vs "6 months" is just how much
-  // of the end of that array gets rendered, not a different request.
   const [trendRange, setTrendRange] = useState<"3" | "6" | "all">("6");
 
   const loadDashboard = useCallback(async () => {
@@ -172,8 +158,6 @@ export function Dashboard() {
     void loadDashboard();
   }, [loadDashboard]);
 
-  // Categories actually present in the data - drives the filter dropdown, where showing an
-  // unused category would just be a selectable option that always returns nothing.
   const categoryOptions = useMemo(
     () =>
       [...new Set(transactions.map((t) => t.category).filter((c): c is string => Boolean(c)))].sort((a, b) =>
@@ -182,17 +166,11 @@ export function Dashboard() {
     [transactions]
   );
 
-  // Seed list merged with whatever the user has actually used - drives the free-text category
-  // datalist, where the goal is good suggestions (including for a brand-new user with no
-  // transactions yet), not a restriction to what already exists.
   const categorySuggestions = useMemo(
     () => [...new Set([...SUGGESTED_CATEGORIES, ...categoryOptions])].sort((a, b) => a.localeCompare(b)),
     [categoryOptions]
   );
 
-  // Total-spend month-over-month only - the backend's category breakdown is all-time, not
-  // scoped per month, so a per-category comparison ("18% less on takeaways") would need a new
-  // aggregation query. This reads entirely from the trend series already fetched for the chart.
   const spendComparison = useMemo(() => {
     if (!summary || summary.trend.length < 2) return null;
     const sorted = [...summary.trend].sort((a, b) => a.month.localeCompare(b.month));
@@ -215,8 +193,6 @@ export function Dashboard() {
     return sorted.slice(-Number(trendRange));
   }, [summary, trendRange]);
 
-  // Money in vs money out - the direction every transaction already carries, just summed
-  // instead of listed. All-time, matching the scope of the total-spend figure above it.
   const moneyFlow = useMemo(() => {
     let in_ = 0;
     let out = 0;
@@ -258,8 +234,6 @@ export function Dashboard() {
     setFilterQuery("");
   };
 
-  // Exports whatever the filters currently show, not the whole account - "export what I'm
-  // looking at" matches how the filter bar already behaves everywhere else on this page.
   const exportVisibleAsCsv = () => {
     downloadCsv(
       `finme-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
@@ -277,11 +251,6 @@ export function Dashboard() {
     );
   };
 
-  // Windowing the already-loaded list, not a second network request. The whole list is fetched
-  // once and filtered client-side (see visibleTransactions above); a full statement upload or a
-  // long history can still put hundreds of rows in one <table>, which is what actually gets
-  // unusable to scroll and render - paging the DOM output fixes that without touching how
-  // filtering works.
   const PAGE_SIZE = 25;
   const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.max(1, Math.ceil(visibleTransactions.length / PAGE_SIZE));
@@ -291,8 +260,6 @@ export function Dashboard() {
     pageInBounds * PAGE_SIZE
   );
 
-  // A filter change can shrink the result set below the page you were on - reset rather than
-  // show an empty page that looks like "no results" when results exist on page 1.
   useEffect(() => {
     setCurrentPage(1);
   }, [filterCategory, filterSourceType, filterDirection, filterFrom, filterTo, filterQuery]);
@@ -335,8 +302,6 @@ export function Dashboard() {
     setLoggingManual(true);
     try {
       await apiPostJson<Transaction[]>("/api/transactions/manual", { text: manualText.trim() }, token);
-      // Cleared only after the call succeeds - on failure the user keeps what they typed and
-      // can adjust it, rather than having to retype the whole description.
       setManualText("");
       await loadDashboard();
     } catch (err) {
@@ -452,8 +417,6 @@ export function Dashboard() {
     }
   };
 
-  // The backend reports progress as a percentage baked into uploadProgress's text (see
-  // pollUntilSettled) - pulled back out here only to drive the visual bar, never re-derived.
   const uploadPercentMatch = uploadProgress?.match(/(\d+)%/);
   const uploadPercent = uploadPercentMatch ? Number(uploadPercentMatch[1]) : null;
 
