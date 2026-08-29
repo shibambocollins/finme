@@ -2,18 +2,6 @@ import { Link } from "react-router-dom";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import "./Legal.css";
 
-/**
- * Written to describe what this app actually does, grounded in docs/02-srs.md (NFR-1 through
- * NFR-4) and the real, shipped behaviour in the codebase - not boilerplate. Two things are
- * deliberately NOT claimed here: HIPAA compliance (this app processes no health information and
- * HIPAA does not apply to it at all - claiming it would be false) and formal POPIA certification
- * (real compliance requires a registered Information Officer, a PAIA manual, and documented
- * processes this solo, dev-stage project does not yet have - so this describes alignment with
- * POPIA's principles, not certified compliance).
- * <p>
- * Not legal advice, and not reviewed by a lawyer - a good-faith, accurate description of real
- * practices, written the way a careful solo developer's policy should read at this stage.
- */
 export function Privacy() {
   useDocumentTitle("Privacy Policy | FinMe");
 

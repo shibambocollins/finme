@@ -2,11 +2,6 @@ import { Link } from "react-router-dom";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import "./Legal.css";
 
-/**
- * Same grounding as Privacy.tsx - describes what FinMe actually is and does, written for a
- * free, solo-developer, dev-stage project rather than copied from a funded startup's template.
- * Not legal advice, not reviewed by a lawyer.
- */
 export function Terms() {
   useDocumentTitle("Terms & Conditions | FinMe");
 
