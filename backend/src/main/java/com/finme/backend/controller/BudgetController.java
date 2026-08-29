@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/** Monthly per-category spending targets, with this month's calculated status. */
 @RestController
 @RequestMapping("/api/budgets")
 public class BudgetController {
@@ -35,7 +34,6 @@ public class BudgetController {
         return budgetService.list(authenticatedUser.currentUserId());
     }
 
-    /** Upsert: posting a category that already has a budget updates its limit. */
     @PostMapping
     public ResponseEntity<BudgetStatusResponse> createOrUpdate(@Valid @RequestBody CreateOrUpdateBudgetRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
