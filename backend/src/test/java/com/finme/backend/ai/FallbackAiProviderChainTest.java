@@ -16,7 +16,6 @@ class FallbackAiProviderChainTest {
     private static final ExtractedTransaction SAMPLE = new ExtractedTransaction(
             LocalDate.now(), "Test Merchant", new BigDecimal("10.00"), "Other", "test");
 
-    /** Stubs the extraction half; every other capability fails loudly via StubAiProvider. */
     private static AiProvider extractsWith(Function<String, List<ExtractedTransaction>> behaviour) {
         return new StubAiProvider() {
             @Override
@@ -26,7 +25,6 @@ class FallbackAiProviderChainTest {
         };
     }
 
-    /** Stubs the narration half, the same way. */
     private static AiProvider recommendsWith(Function<String, List<String>> behaviour) {
         return new StubAiProvider() {
             @Override
