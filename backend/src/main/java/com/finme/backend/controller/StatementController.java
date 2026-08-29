@@ -49,7 +49,6 @@ public class StatementController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(BankStatementResponse.from(statement));
     }
 
-    /** Poll target for an in-flight upload: carries status, chunk progress, and any failure reason. */
     @GetMapping("/{id}")
     public ResponseEntity<BankStatementResponse> status(@PathVariable Long id) {
         BankStatement statement =
