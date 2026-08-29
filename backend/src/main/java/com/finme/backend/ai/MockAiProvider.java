@@ -10,11 +10,10 @@ import java.util.List;
 
 /**
  * Deterministic stand-in for a real provider call, so the full ingestion pipeline
- * (extract -> redact -> structure -> persist) can be built and tested without spending real
- * API quota on every run. Active by default and whenever ai.provider is unset or "mock"; set
- * ai.provider=chain (see AiProviderConfig) to route through the real Groq/OpenRouter/
- * Cloudflare fallback chain instead. The two conditions are mutually exclusive on the same
- * property, so there's never bean ambiguity for a plain AiProvider injection point.
+ * (extract -> redact -> structure -> persist) can be built and tested without spending real API
+ * quota on every run. Active by default and whenever ai.provider is unset or "mock"; set
+ * ai.provider=chain (see AiProviderConfig) to route through the real Groq/OpenRouter/Cloudflare
+ * fallback chain instead.
  */
 @Component
 @Primary

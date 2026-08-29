@@ -12,12 +12,10 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * Builds the real fallback chain (Groq -> OpenRouter -> Cloudflare - matching every doc's
- * stated ordering, not yet empirically rate/latency-tested per docs/07-tech-stack.md) as the
- * active AiProvider bean when ai.provider=chain. MockAiProvider keeps @Primary on its own
- * mutually-exclusive havingValue="mock" condition, so there's never ambiguity for
- * StatementIngestionService's plain AiProvider constructor param - exactly one of the two
- * conditions is ever true.
+ * Builds the real fallback chain (Groq -> OpenRouter -> Cloudflare) as the active AiProvider
+ * bean when ai.provider=chain. MockAiProvider keeps @Primary on its own mutually-exclusive
+ * havingValue="mock" condition, so there's never ambiguity for StatementIngestionService's plain
+ * AiProvider constructor param - exactly one of the two conditions is ever true.
  */
 @Configuration
 public class AiProviderConfig {
