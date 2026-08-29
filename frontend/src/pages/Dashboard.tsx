@@ -352,12 +352,11 @@ export function Dashboard() {
    * would only add requests without learning anything sooner.
    * <p>
    * The deadline is 20 minutes, not a smaller "reasonable-looking" number, because free-tier
-   * providers really can take that long in a genuine worst case: measured live 2026-08-27, a
-   * chunk that fails over from Groq to OpenRouter (which happens whenever Groq's own quota is
-   * exhausted, not rarely) takes ~50-90s on OpenRouter alone, and a large statement can need a
-   * dozen chunks. Giving up too early would not fail any faster - extraction keeps running on
-   * the backend regardless of whether this tab is still watching it, so "check back shortly"
-   * genuinely means the statement will be there next time the dashboard is opened.
+   * providers really can take that long in a genuine worst case - a chunk falling back from
+   * Groq to OpenRouter isn't rare, and a large statement can need a dozen chunks. Giving up
+   * early wouldn't fail any faster either: extraction keeps running on the backend regardless
+   * of whether this tab is watching, so "check back shortly" genuinely means the statement will
+   * be there next time the dashboard is opened.
    */
   const pollUntilSettled = async (statementId: number): Promise<BankStatementResponse> => {
     const deadline = Date.now() + 20 * 60 * 1000;
