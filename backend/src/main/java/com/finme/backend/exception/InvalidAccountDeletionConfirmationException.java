@@ -2,8 +2,6 @@ package com.finme.backend.exception;
 
 import org.springframework.http.HttpStatus;
 
-/** The typed confirmation on a destructive account action didn't match the signed-in account's
- *  own email (UserService.clearFinancialData, UserService.deleteAccount). */
 public class InvalidAccountDeletionConfirmationException extends ApiException {
 
     public InvalidAccountDeletionConfirmationException() {

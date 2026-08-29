@@ -27,14 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-/**
- * Credit profile management (FR-2.1.1 to FR-2.1.4).
- * <p>
- * No endpoint accepts a profile or user id. Every one resolves the profile from the
- * authenticated user, so there is no request shape in which a caller can name whose credit data
- * to read or change - the ownership check is structural rather than something each handler has
- * to remember.
- */
 @RestController
 @RequestMapping("/api/credit")
 public class CreditController {
@@ -51,7 +43,6 @@ public class CreditController {
         this.authenticatedUser = authenticatedUser;
     }
 
-    /** Body is optional - posting nothing takes the documented bureau and scale defaults. */
     @PostMapping("/profile")
     public ResponseEntity<CreditProfileResponse> createProfile(
             @Valid @RequestBody(required = false) CreateCreditProfileRequest request) {
@@ -70,12 +61,6 @@ public class CreditController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * These return the whole profile rather than just the changed account. The credit position
-     * is only meaningful as a whole - one account's balance means nothing without the others -
-     * so a client always needs the full picture after any change, and returning it here saves a
-     * follow-up request that could otherwise render a briefly inconsistent view.
-     */
     @PostMapping("/accounts")
     public ResponseEntity<CreditProfileResponse> addAccount(@Valid @RequestBody CreditAccountRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -104,22 +89,16 @@ public class CreditController {
         return creditProfileService.scoreHistory(authenticatedUser.currentUserId());
     }
 
-    /** Calculated utilization plus a prioritised plan and the mandatory disclaimer. */
     @GetMapping("/analysis")
     public CreditAnalysisResponse analysis() {
         return creditAnalysisService.analyse(authenticatedUser.currentUserId());
     }
 
-    /**
-     * A what-if (FR-2.3.2). POST rather than GET because it carries a body, but it writes
-     * nothing - the stored balance is untouched.
-     */
     @PostMapping("/simulate")
     public UtilizationSimulationResponse simulate(@Valid @RequestBody UtilizationSimulationRequest request) {
         return creditAnalysisService.simulate(authenticatedUser.currentUserId(), request);
     }
 
-    /** Current score against an earlier reading; defaults to the one immediately before it. */
     @GetMapping("/score/comparison")
     public ScoreComparisonResponse scoreComparison(@RequestParam(required = false) Long againstSnapshotId) {
         return creditAnalysisService.compareScores(authenticatedUser.currentUserId(), againstSnapshotId);
