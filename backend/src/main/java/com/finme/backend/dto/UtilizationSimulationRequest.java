@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
-/** A hypothetical balance for one account (FR-2.3.2). Nothing stored is changed. */
 public record UtilizationSimulationRequest(
         @NotNull(message = "Choose an account to simulate")
         Long accountId,
