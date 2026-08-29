@@ -7,19 +7,12 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Splits redacted statement text into pieces small enough for one AI call.
- * <p>
- * This is not an optimisation - a whole real statement cannot be extracted in a single call on
- * the free tiers this project targets, and trying produced silent data loss. Measured against
- * the live APIs on 2026-08-22:
- * <ul>
- *   <li>Groq's free tier caps <b>tokens per minute at 8000</b>, counting prompt tokens plus the
- *       requested max_tokens - so the output budget is spent from the rate limit whether the
- *       model uses it or not, and one oversized request is rejected outright with HTTP 413.</li>
- *   <li>OpenRouter accepted the same statement but hit its output limit part-way through and
- *       returned finish_reason "length" - a truncated transaction list.</li>
- * </ul>
- * Both failure modes come from asking for one enormous answer. Many small answers avoid both.
+ * Splits redacted statement text into pieces small enough for one AI call - not an optimisation,
+ * a whole real statement cannot be extracted in a single call on the free tiers this project
+ * targets. Both failure modes of trying anyway come from asking for one enormous answer:
+ * Groq's free tier rejects an oversized request outright (its per-minute token cap counts
+ * requested output against the same budget as the prompt), and OpenRouter instead truncates
+ * mid-answer. Many small answers avoid both.
  * <p>
  * Every chunk repeats the statement header, because the header is where the year lives. Card
  * statements print "12 Jul" with no year, and a chunk of bare transaction rows gives the model
@@ -29,28 +22,13 @@ import java.util.regex.Pattern;
 public class StatementTextChunker {
 
     /**
-     * Lines of transaction rows per chunk.
-     * <p>
-     * Raised from 15 to 40 on 2026-08-27 after a real user's 480-row statement took over 15
-     * minutes and then timed out - the backend log showed a rate-limit wait on nearly every one
-     * of its 32 chunks. The category/merchant guidance added to the prompt on 2026-08-23 (for
-     * category-accuracy) costs roughly 850 fixed tokens, and that cost is paid <b>again on every
-     * chunk</b> - at 15 rows/chunk it dominated the request. Measured live against the real
-     * prompt at increasing chunk sizes:
-     * <pre>
-     * rows  prompt_tokens  completion_tokens  total   finish
-     *  15        1073            769          1842    stop
-     *  25        1223           1090          2313    stop
-     *  35        1371           1573          2944    stop
-     *  40        1448           2380          3828    stop
-     *  50        1591           2910          4501    stop
-     *  60        1740           3794          5534    stop
-     * </pre>
-     * All extracted every row, with generous margin under Groq's 8000-token single-request
-     * ceiling even at 60. 40 is deliberately not the most aggressive value tested (60 also
-     * passed) - real statements can carry longer merchant/reference text than the synthetic
-     * rows used to measure this, and a chunk size chosen right at the tested edge would have no
-     * room for that. At 40, a 480-row statement needs 12 chunks instead of 32.
+     * Lines of transaction rows per chunk. Raised from an original 15: the category/merchant
+     * guidance in the prompt costs a large fixed number of tokens paid again on every chunk, so
+     * a small chunk size wastes most of its request on that fixed cost rather than transaction
+     * rows - measured live, a large real statement at 15 rows/chunk needed enough chunks to hit
+     * rate limits on nearly every one of them and time out. 40 clears the free tier's per-request
+     * token ceiling with real margin (real statements carry longer merchant text than a
+     * synthetic test would), while cutting a large statement's chunk count by over half.
      */
     static final int ROWS_PER_CHUNK = 40;
 
@@ -63,10 +41,9 @@ public class StatementTextChunker {
 
     /**
      * Marks where transaction rows begin. The header must be found, not assumed at a fixed
-     * offset: a fixed count silently swept real transaction rows into the header, and because
-     * the header is repeated into every chunk those rows were then extracted once per chunk.
-     * An 80-row statement came back as 95 transactions - three rows duplicated across six
-     * chunks - which is worse than losing them, since inflated spend still looks plausible.
+     * offset: a fixed count can silently sweep real transaction rows into the header, and since
+     * the header repeats into every chunk, those rows then get extracted once per chunk -
+     * duplicated spend, which is worse than missing data since it still looks plausible.
      * <p>
      * Covers the common statement date styles: "01 Jul", "12/01/2026", "2026-07-01".
      */
