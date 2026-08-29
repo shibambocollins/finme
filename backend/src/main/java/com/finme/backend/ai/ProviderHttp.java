@@ -12,20 +12,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * One POST, with the provider's rate limit respected.
- * <p>
- * This is a single class because the AI package previously had four independent
- * {@code restClient.post()} call sites - text, vision, and both Cloudflare variants - and only
- * one of them knew anything about rate limits. That is exactly how the vision path ended up
- * without the retry behaviour the text path had: the fix was applied where the bug was seen,
- * and the three copies elsewhere were invisible. Collapsing them means the next lesson learned
- * about a provider's behaviour is learned once, everywhere.
+ * One POST, with the provider's rate limit respected - shared by every provider so the retry
+ * behaviour is applied everywhere the same way, not just where it was first needed.
  */
 final class ProviderHttp {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderHttp.class);
 
-    /** "Please try again in 4.282499999s" - the wait Groq reports inside its 429 body. */
     private static final Pattern RETRY_HINT = Pattern.compile("try again in ([0-9.]+)s");
     private static final Duration DEFAULT_RATE_LIMIT_WAIT = Duration.ofSeconds(20);
     private static final int MAX_RATE_LIMIT_RETRIES = 4;
@@ -53,8 +46,6 @@ final class ProviderHttp {
     }
 
     /**
-     * Posts the body, waiting and retrying when the provider says it is rate limited.
-     * <p>
      * A 429 is not a failure - it's the provider saying "not yet", and it states exactly how
      * long to wait, so honouring that turns a hard failure into a pause. A free tier's
      * per-minute budget makes this routine on a multi-chunk statement, not an edge case.
@@ -102,11 +93,9 @@ final class ProviderHttp {
 
     /**
      * Prefers the standard Retry-After header; falls back to the wait embedded in the error
-     * body ("Please try again in 4.282499999s"), then to a fixed pause. A second is added to
-     * whatever is found, because resuming exactly on the boundary tends to race the provider's
-     * own window and 429 again.
+     * body, then to a fixed pause. A second is added to whatever is found, because resuming
+     * exactly on the boundary tends to race the provider's own window and 429 again.
      */
-    /** Package-private (not private) purely so ProviderHttpTest can exercise it directly. */
     static Duration retryAfter(HttpClientErrorException.TooManyRequests ex) {
         String header = ex.getResponseHeaders() == null ? null : ex.getResponseHeaders().getFirst("Retry-After");
         if (header != null) {
