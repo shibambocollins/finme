@@ -108,8 +108,6 @@ export function Credit() {
       setAnalysis(analysisData);
       setComparison(comparisonData);
     } catch (err) {
-      // 404 is the ordinary state for a user who has not opted in - the credit module is
-      // optional, so "no profile" is a starting point to offer, not a failure to report.
       if (err instanceof ApiError && err.status === 404) {
         setProfile(null);
         setError(null);
