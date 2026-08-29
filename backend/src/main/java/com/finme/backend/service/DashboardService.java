@@ -71,11 +71,6 @@ public class DashboardService {
         return new DashboardSummaryResponse(totalSpend, categoryBreakdown, trend);
     }
 
-    /**
-     * One entry per day of the given month, defaulting to the current month. Every day is
-     * present even at zero spend - a calendar grid with gaps for untouched days would be a
-     * frontend workaround for something the backend can answer directly.
-     */
     public CalendarResponse getCalendar(Long userId, YearMonth month) {
         YearMonth target = month == null ? YearMonth.now(clock) : month;
 
