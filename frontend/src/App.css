@@ -92,8 +92,6 @@
   color: var(--forest);
 }
 
-/* Skip link - the first focusable thing on any authenticated page, invisible until it
-   receives keyboard focus, then jumps straight past the header to #main-content. */
 .skip-link {
   position: fixed;
   top: -60px;
@@ -113,8 +111,6 @@
   top: 12px;
 }
 
-/* Mobile nav - hamburger button + slide-out drawer, replacing the desktop inline nav/profile
-   below the breakpoint rather than letting them wrap into a cramped row. */
 .app-header__menu-btn {
   display: none;
   flex-direction: column;
@@ -372,9 +368,6 @@ input::placeholder {
   color: var(--ink-30);
 }
 
-/* A disabled field the user will never be able to edit here (email - this app signs in by
-   email, not a separate username) - visually distinct from a field that's just temporarily
-   disabled mid-save, so it doesn't need an explanatory caption underneath it. */
 .field-readonly {
   background: var(--stone);
   border-color: var(--line);
@@ -512,9 +505,6 @@ input::placeholder {
   line-height: 1.5;
 }
 
-/* Google's own button guidelines call for a plain, undecorated treatment - no hard offset
-   shadow, no fill - so this is deliberately its own look rather than a variant of .btn-quiet.
-   Built standalone (not relying on the `button` element base) since this control is an <a>. */
 .oauth-button {
   display: flex;
   align-items: center;
@@ -545,9 +535,6 @@ input::placeholder {
   flex: 0 0 auto;
 }
 
-/* An input group, not an input with a button floated on top of it - the border, background and
-   focus ring all live on this wrapper, and the <input> inside is borderless/transparent, so the
-   toggle sits as a normal flex child genuinely inside the same field, not overlaid on it. */
 .password-field {
   display: flex;
   align-items: center;
@@ -654,7 +641,6 @@ input::placeholder {
   min-width: 220px;
 }
 
-/* Docked progress surface for a long-running extraction - percentages come from the backend. */
 .upload-progress-track {
   width: 100%;
   max-width: 320px;

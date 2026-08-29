@@ -70,8 +70,6 @@ export function apiDelete<T>(path: string, token: string | null): Promise<T> {
   return request<T>(path, { method: "DELETE", token });
 }
 
-/** DELETE with a JSON body - used only where the server requires a confirmation payload
- *  alongside the method (see UserController: clearing financial data, deleting the account). */
 export function apiDeleteJson<T>(path: string, body: unknown, token: string | null): Promise<T> {
   return request<T>(path, {
     method: "DELETE",
