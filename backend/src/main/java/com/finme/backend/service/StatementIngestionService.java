@@ -181,18 +181,12 @@ public class StatementIngestionService {
         }
     }
 
-    /**
-     * Looks up a statement for polling, scoped to its owner. The ownership check is the point:
-     * without it, any authenticated user could read another account's statement simply by
-     * guessing a sequential id.
-     */
     public BankStatement getForUser(Long userId, Long statementId) {
         return bankStatementRepository.findById(statementId)
                 .filter(statement -> statement.getUserId().equals(userId))
                 .orElseThrow(() -> new StatementNotFoundException(statementId));
     }
 
-    /** Root-cause message, trimmed to fit the column and to stay readable in a UI. */
     private static String describe(Exception ex) {
         Throwable cause = ex;
         while (cause.getCause() != null && cause.getCause() != cause) {

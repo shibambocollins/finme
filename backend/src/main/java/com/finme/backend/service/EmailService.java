@@ -5,15 +5,6 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
-/**
- * Thin wrapper around JavaMailSender (auto-configured once spring.mail.* is set - Brevo's SMTP
- * relay, see docs/07-tech-stack.md). Plain text throughout - at two message types there is
- * still no reason for templating machinery.
- * <p>
- * fromAddress reads app.mail.from-address, deliberately not spring.mail.username: the latter is
- * the SMTP login credential, and a provider's verified "From:" sender is not guaranteed to be
- * the same value - conflating them worked by coincidence with Gmail, where they usually are.
- */
 @Service
 public class EmailService {
 
@@ -47,10 +38,6 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    /**
-     * Sends the weekly spend analysis (FR-1.8.2). Subject and body arrive already composed by
-     * WeeklySpendAnalysisService - this class stays a transport, with no opinion about content.
-     */
     public void sendWeeklySpendAnalysis(String toEmail, String subject, String body) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromAddress);
