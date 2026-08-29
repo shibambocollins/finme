@@ -118,7 +118,6 @@ final class SyntheticGoldenSet {
 
         for (int i = 0; i < 32; i++) {
             int day = (i % 28) + 1;
-            // Distinct amounts so every row is individually identifiable when scoring.
             BigDecimal amount = new BigDecimal(String.format("%d.%02d", 100 + i * 7, (i * 13) % 100));
             String merchant = merchants[i % merchants.length];
             lines.add(String.format("%02d Jul   %-34s %8s", day, merchant, amount));
