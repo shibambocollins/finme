@@ -3,6 +3,11 @@
 .DS_Store
 Thumbs.db
 
+# Claude Code project files - not meant to be public on GitHub.
+CLAUDE.md
+AGENTS.md
+.claude/
+
 # JVM crash artifacts - diagnostic output from whatever process crashed, never something with a
 # reason to be committed. Patterns, not literal filenames: the PID changes every time, and a
 # filename-only rule already let two of these (backend/hs_err_pid48904.log,
