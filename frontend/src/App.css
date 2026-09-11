@@ -1101,6 +1101,59 @@ input::placeholder {
   color: var(--ink-50);
 }
 
+.calendar-breakdown-total {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-breakdown {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.calendar-breakdown-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.calendar-breakdown-name {
+  font-size: 12.5px;
+  color: var(--ink-50);
+  overflow-wrap: anywhere;
+}
+
+.calendar-breakdown-amount {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* The bar repeats the share the amount already states - redundant on purpose, so the
+   split reads at a glance without decoding numbers. */
+.calendar-breakdown-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.calendar-breakdown-bar span {
+  display: block;
+  height: 100%;
+  background: var(--forest);
+}
+
 @media (max-width: 860px) {
   .calendar-layout {
     grid-template-columns: minmax(0, 1fr);

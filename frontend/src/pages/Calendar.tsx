@@ -107,12 +107,31 @@ export function CalendarPage() {
       total,
       spentDayCount: spentDays.length,
       zeroDayCount: days.length - spentDays.length,
-      // Averaged over days with spend, not all days - dividing by the full month would
-      // quietly understate the typical spending day.
-      averagePerSpentDay: spentDays.length ? total / spentDays.length : 0,
+      // Across every day in the month, zero-spend days included - this is the per-day
+      // burn rate, so the no-spend days have to count or it is not an average at all.
+      averagePerDay: total / days.length,
       busiest,
     };
   }, [calendar]);
+
+  // Category split for the open day - the transactions are already loaded, this is just
+  // a different cut of them.
+  const dayBreakdown = useMemo(() => {
+    const debits = dayTransactions.filter((t) => t.direction === "DEBIT");
+    if (!debits.length) return null;
+    const byCategory = new Map<string, number>();
+    for (const t of debits) {
+      const key = t.category ?? "Uncategorized";
+      byCategory.set(key, (byCategory.get(key) ?? 0) + t.amount);
+    }
+    const total = debits.reduce((sum, t) => sum + t.amount, 0);
+    return {
+      total,
+      categories: [...byCategory.entries()]
+        .map(([name, amount]) => ({ name, amount, share: total ? (amount / total) * 100 : 0 }))
+        .sort((a, b) => b.amount - a.amount),
+    };
+  }, [dayTransactions]);
 
   return (
     <>
@@ -181,8 +200,8 @@ export function CalendarPage() {
                     <dd>{monthSummary.zeroDayCount}</dd>
                   </div>
                   <div>
-                    <dt>Average spending day</dt>
-                    <dd>R{monthSummary.averagePerSpentDay.toFixed(2)}</dd>
+                    <dt>Average per day</dt>
+                    <dd>R{monthSummary.averagePerDay.toFixed(2)}</dd>
                   </div>
                   {monthSummary.busiest && (
                     <div>
@@ -223,6 +242,30 @@ export function CalendarPage() {
                 </ul>
               )}
             </section>
+
+            {dayBreakdown && (
+              <section className="calendar-panel">
+                <h2 className="calendar-panel-title">Where it went</h2>
+                <p className="calendar-breakdown-total">R{dayBreakdown.total.toFixed(2)}</p>
+                <ul className="calendar-breakdown">
+                  {dayBreakdown.categories.map((c) => (
+                    <li key={c.name}>
+                      <div className="calendar-breakdown-row">
+                        <span className="calendar-breakdown-name">{c.name}</span>
+                        <span className="calendar-breakdown-amount">R{c.amount.toFixed(2)}</span>
+                      </div>
+                      <div
+                        className="calendar-breakdown-bar"
+                        role="img"
+                        aria-label={`${c.name}: ${c.share.toFixed(0)} percent of the day`}
+                      >
+                        <span style={{ width: `${c.share}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </aside>
         </div>
       )}
