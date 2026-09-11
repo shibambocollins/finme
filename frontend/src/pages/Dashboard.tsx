@@ -131,15 +131,27 @@ export function Dashboard() {
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
-    try {
-      const [transactionData, summaryData] = await Promise.all([
+    setError(null);
+    const fetchCore = () =>
+      Promise.all([
         apiGet<Transaction[]>("/api/transactions", token),
         apiGet<DashboardSummary>("/api/dashboard/summary", token),
       ]);
+    try {
+      const [transactionData, summaryData] = await fetchCore();
       setTransactions(transactionData);
       setSummary(summaryData);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load dashboard");
+    } catch {
+      // One retry after a brief pause - covers a cold start or one-off network blip rather
+      // than surfacing an error for something that resolves itself a moment later.
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const [transactionData, summaryData] = await fetchCore();
+        setTransactions(transactionData);
+        setSummary(summaryData);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Couldn't load your dashboard - try refreshing the page.");
+      }
     } finally {
       setLoading(false);
     }
