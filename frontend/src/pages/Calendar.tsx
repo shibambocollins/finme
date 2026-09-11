@@ -69,11 +69,15 @@ export function CalendarPage() {
     void load();
   }, [load]);
 
+  // Optional-chains days too, not just calendar - a response missing the array threw here
+  // and took the whole page down to a blank screen rather than an error message.
+  const days = useMemo(() => calendar?.days ?? [], [calendar]);
+
   const leadingBlanks = useMemo(() => {
-    if (!calendar?.days.length) return 0;
-    const [year, m, d] = calendar.days[0].date.split("-").map(Number);
+    if (!days.length) return 0;
+    const [year, m, d] = days[0].date.split("-").map(Number);
     return new Date(year, m - 1, d).getDay();
-  }, [calendar]);
+  }, [days]);
 
   const openDay = async (date: string) => {
     setSelectedDate(date);
@@ -87,15 +91,11 @@ export function CalendarPage() {
     }
   };
 
-  const maxDaySpend = useMemo(
-    () => Math.max(1, ...(calendar?.days.map((d) => d.total) ?? [0])),
-    [calendar]
-  );
+  const maxDaySpend = useMemo(() => Math.max(1, ...days.map((d) => d.total), 0), [days]);
 
   // Derived from the days already fetched for the grid - no second request, and it can
   // never disagree with what the squares show.
   const monthSummary = useMemo(() => {
-    const days = calendar?.days ?? [];
     if (!days.length) return null;
     const spentDays = days.filter((d) => d.total > 0);
     const total = spentDays.reduce((sum, d) => sum + d.total, 0);
@@ -112,7 +112,7 @@ export function CalendarPage() {
       averagePerDay: total / days.length,
       busiest,
     };
-  }, [calendar]);
+  }, [days]);
 
   // Category split for the open day - the transactions are already loaded, this is just
   // a different cut of them.
@@ -164,7 +164,7 @@ export function CalendarPage() {
             {Array.from({ length: leadingBlanks }).map((_, i) => (
               <div key={`blank-${i}`} className="calendar-day calendar-day--blank" />
             ))}
-            {calendar.days.map((day) => {
+            {days.map((day) => {
               const dayNumber = Number(day.date.split("-")[2]);
               const intensity = day.total > 0 ? Math.min(0.32, Math.max(0.08, (day.total / maxDaySpend) * 0.32)) : 0;
               return (

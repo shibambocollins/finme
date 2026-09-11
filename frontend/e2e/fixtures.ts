@@ -59,14 +59,15 @@ export async function gotoCalendarAuthenticated(page: Page) {
   // which stops the page booting at all.
   const api = "http://localhost:8080";
 
+  // Registered broadest-first: Playwright tries the most recently added route first, so
+  // the catch-all has to go down before the specific ones or it shadows them.
+  await page.route(`${api}/api/**`, (route) => route.fulfill({ json: [] }));
   await page.route(`${api}/api/dashboard/calendar**`, (route) =>
     route.fulfill({ json: CALENDAR_FIXTURE })
   );
   await page.route(`${api}/api/transactions**`, (route) =>
     route.fulfill({ json: DAY_TRANSACTIONS })
   );
-  // Anything else the page reaches for resolves empty rather than hanging on a real host.
-  await page.route(`${api}/api/**`, (route) => route.fulfill({ json: [] }));
 
   await page.addInitScript(() => {
     localStorage.setItem(
@@ -83,9 +84,35 @@ export async function gotoCalendarAuthenticated(page: Page) {
   await page.waitForSelector(".calendar-grid");
 }
 
-/** Fails if an element sticks out past the viewport - the actual definition of "broken on mobile". */
+/**
+ * Clicks a day by its number.
+ *
+ * Matching on the rendered amount instead looks tempting and is a trap: the squares round
+ * with toFixed(0), so R745.64 renders "R746" and a hasText:"745" filter silently matches
+ * nothing. The day number is the stable handle.
+ */
+export async function clickDay(page: Page, dayNumber: number) {
+  await page
+    .locator(".calendar-day:not(.calendar-day--blank)")
+    .filter({ has: page.locator(`.calendar-day-number:text-is("${dayNumber}")`) })
+    .click();
+}
+
+/**
+ * Fails if page content sticks out past the viewport - the actual definition of "broken
+ * on mobile".
+ *
+ * Scoped to <main> deliberately. The closed mobile nav drawer is parked off-screen to the
+ * right by design and is site-wide, so a document-level check reports it on every page and
+ * would say nothing about this layout.
+ */
 export async function hasHorizontalOverflow(page: Page): Promise<boolean> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
-  );
+  return page.evaluate(() => {
+    const limit = document.documentElement.clientWidth + 1;
+    const main = document.querySelector("main");
+    if (!main) return true;
+    return [main, ...main.querySelectorAll("*")].some(
+      (el) => el.getBoundingClientRect().right > limit
+    );
+  });
 }

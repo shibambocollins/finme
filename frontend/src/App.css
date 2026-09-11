@@ -1004,7 +1004,9 @@ input::placeholder {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, 1fr), not 1fr: plain 1fr floors each column at its content width, so the
+     amount text held the columns at ~60px and seven of them overflowed a 390px phone. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -1172,6 +1174,78 @@ input::placeholder {
   background: var(--forest);
 }
 
+.calendar-weekday {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  padding-bottom: 6px;
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  aspect-ratio: 1;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  box-shadow: none;
+  /* Lets the cell shrink below its content width - without this the flex default of
+     min-width:auto puts the overflow straight back. */
+  min-width: 0;
+  overflow: hidden;
+}
+
+.calendar-day:hover:not(:disabled) {
+  transform: none;
+  border-color: var(--forest-border);
+}
+
+.calendar-day--blank {
+  border: none;
+  background: transparent;
+  cursor: default;
+  visibility: hidden;
+}
+
+.calendar-day--selected {
+  border-color: var(--forest);
+  outline: 1.5px solid var(--forest);
+  outline-offset: -1px;
+}
+
+.calendar-day-number {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-day-total {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-50);
+  /* Once the columns can shrink, a large amount has to clip rather than push the cell
+     wide again and reintroduce the overflow. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Calendar responsive ladder. These must stay at the end of the calendar section: the
+   base .calendar-day / .calendar-weekday rules are declared above, and equal-specificity
+   rules are decided by source order, so media queries placed earlier silently lose. */
+
 /* Laptops below the 1280px page cap: give the rail back some width to the grid so the
    day squares do not get too small to read. */
 @media (max-width: 1180px) {
@@ -1260,64 +1334,6 @@ input::placeholder {
   .calendar-day-total {
     font-size: 9px;
   }
-}
-
-.calendar-weekday {
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-40);
-  padding-bottom: 6px;
-}
-
-.calendar-day {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 4px;
-  aspect-ratio: 1;
-  min-height: 60px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 5px;
-  background: var(--card);
-  color: var(--ink);
-  cursor: pointer;
-  font-size: 12px;
-  box-shadow: none;
-}
-
-.calendar-day:hover:not(:disabled) {
-  transform: none;
-  border-color: var(--forest-border);
-}
-
-.calendar-day--blank {
-  border: none;
-  background: transparent;
-  cursor: default;
-  visibility: hidden;
-}
-
-.calendar-day--selected {
-  border-color: var(--forest);
-  outline: 1.5px solid var(--forest);
-  outline-offset: -1px;
-}
-
-.calendar-day-number {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-.calendar-day-total {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-50);
 }
 
 /* ============================================================

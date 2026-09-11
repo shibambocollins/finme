@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   EXPECTED,
   VIEWPORTS,
+  clickDay,
   gotoCalendarAuthenticated,
   hasHorizontalOverflow,
 } from "./fixtures";
@@ -125,13 +126,13 @@ test.describe("Day detail and breakdown", () => {
   });
 
   test("clicking a day lists that day's transactions", async ({ page }) => {
-    await page.locator(".calendar-day", { hasText: "745" }).click();
+    await clickDay(page, 4);
     await expect(page.locator(".calendar-day-list li")).toHaveCount(4);
     await expect(page.getByText("Lovelysupermarket Zonnebloem")).toBeVisible();
   });
 
   test("merchant and amount share one row instead of stacking", async ({ page }) => {
-    await page.locator(".calendar-day", { hasText: "745" }).click();
+    await clickDay(page, 4);
 
     const row = page.locator(".calendar-day-list li").first();
     const merchant = await row.locator(".calendar-day-list-merchant").boundingBox();
@@ -145,7 +146,7 @@ test.describe("Day detail and breakdown", () => {
   });
 
   test("long merchant names do not wrap past two lines in the rail", async ({ page }) => {
-    await page.locator(".calendar-day", { hasText: "745" }).click();
+    await clickDay(page, 4);
 
     const merchant = page.locator(".calendar-day-list-merchant").first();
     const box = await merchant.boundingBox();
@@ -157,7 +158,7 @@ test.describe("Day detail and breakdown", () => {
   });
 
   test("breakdown totals only the debits, excluding income", async ({ page }) => {
-    await page.locator(".calendar-day", { hasText: "745" }).click();
+    await clickDay(page, 4);
 
     const breakdown = page.locator(".calendar-panel", { hasText: "Where it went" });
     await expect(breakdown.locator(".calendar-breakdown-total")).toHaveText(
@@ -168,7 +169,7 @@ test.describe("Day detail and breakdown", () => {
   });
 
   test("breakdown sorts categories biggest first", async ({ page }) => {
-    await page.locator(".calendar-day", { hasText: "745" }).click();
+    await clickDay(page, 4);
 
     const amounts = await page.locator(".calendar-breakdown-amount").allTextContents();
     const values = amounts.map((t) => parseFloat(t.replace(/[^\d.]/g, "")));
@@ -179,7 +180,7 @@ test.describe("Day detail and breakdown", () => {
     await page.route("http://localhost:8080/api/transactions**", (route) =>
       route.fulfill({ json: [] })
     );
-    await page.locator(".calendar-day", { hasText: "20" }).first().click();
+    await clickDay(page, 20);
 
     await expect(page.getByText(/zero-spend day is a real result/)).toBeVisible();
     await expect(page.locator(".calendar-panel", { hasText: "Where it went" })).toHaveCount(0);
