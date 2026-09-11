@@ -252,6 +252,11 @@
   max-width: 640px;
 }
 
+/* The calendar carries a 7-column grid plus a summary rail - 1080px squeezes both. */
+.page--wide {
+  max-width: 1280px;
+}
+
 /* ============================================================
    Buttons - primary is the default look; .btn-quiet and
    .btn-delete override it. A hard offset shadow instead of a
@@ -986,10 +991,177 @@ input::placeholder {
   text-align: center;
 }
 
+/* Calendar left, summary right. The summary used to sit below the grid, where it was
+   reliably missed - the calendar alone fills the viewport. The rail is deliberately
+   narrow so the grid stays the thing you look at. */
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 24px;
+  align-items: start;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
+}
+
+.calendar-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Follows the grid on tall months so the totals stay on screen while scrolling. */
+  position: sticky;
+  top: 16px;
+}
+
+.calendar-panel {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--card);
+}
+
+.calendar-panel-title {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+}
+
+.calendar-panel-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-50);
+}
+
+.calendar-stats {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.calendar-stats div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.calendar-stats dt {
+  font-size: 12.5px;
+  color: var(--ink-50);
+}
+
+.calendar-stats dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+
+.calendar-stat-lead {
+  font-size: 17px;
+}
+
+.calendar-day-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Long days scroll inside the rail instead of stretching it past the calendar. */
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.calendar-day-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 8px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-day-list-merchant {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.calendar-day-list-meta {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--ink-50);
+}
+
+.calendar-breakdown-total {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar-breakdown {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.calendar-breakdown-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.calendar-breakdown-name {
+  font-size: 12.5px;
+  color: var(--ink-50);
+  overflow-wrap: anywhere;
+}
+
+.calendar-breakdown-amount {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* The bar repeats the share the amount already states - redundant on purpose, so the
+   split reads at a glance without decoding numbers. */
+.calendar-breakdown-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.calendar-breakdown-bar span {
+  display: block;
+  height: 100%;
+  background: var(--forest);
+}
+
+@media (max-width: 860px) {
+  .calendar-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-side {
+    position: static;
+  }
 }
 
 .calendar-weekday {
