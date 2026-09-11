@@ -54,12 +54,19 @@ export const EXPECTED = {
  * them through a real login would make them depend on a running backend and live data.
  */
 export async function gotoCalendarAuthenticated(page: Page) {
-  await page.route("**/api/dashboard/calendar**", (route) =>
+  // Scoped to the API origin, not a bare "**/api/**" - that also matches Vite's own
+  // module URLs like /src/api/client.ts and serves JSON in place of the app's JavaScript,
+  // which stops the page booting at all.
+  const api = "http://localhost:8080";
+
+  await page.route(`${api}/api/dashboard/calendar**`, (route) =>
     route.fulfill({ json: CALENDAR_FIXTURE })
   );
-  await page.route("**/api/transactions**", (route) => route.fulfill({ json: DAY_TRANSACTIONS }));
+  await page.route(`${api}/api/transactions**`, (route) =>
+    route.fulfill({ json: DAY_TRANSACTIONS })
+  );
   // Anything else the page reaches for resolves empty rather than hanging on a real host.
-  await page.route("**/api/**", (route) => route.fulfill({ json: [] }));
+  await page.route(`${api}/api/**`, (route) => route.fulfill({ json: [] }));
 
   await page.addInitScript(() => {
     localStorage.setItem(

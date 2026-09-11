@@ -176,7 +176,9 @@ test.describe("Day detail and breakdown", () => {
   });
 
   test("a zero-spend day says so rather than looking like missing data", async ({ page }) => {
-    await page.route("**/api/transactions**", (route) => route.fulfill({ json: [] }));
+    await page.route("http://localhost:8080/api/transactions**", (route) =>
+      route.fulfill({ json: [] })
+    );
     await page.locator(".calendar-day", { hasText: "20" }).first().click();
 
     await expect(page.getByText(/zero-spend day is a real result/)).toBeVisible();
