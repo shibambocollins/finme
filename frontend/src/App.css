@@ -636,14 +636,18 @@ input::placeholder {
 
 .manual-entry {
   display: flex;
+  /* Wraps so the submit button drops below the field instead of out of the viewport -
+     input min-width + gap + button exceeded 320px and pushed the button off-screen. */
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
   margin-top: 4px;
 }
 
 .manual-entry input {
-  flex: 1;
-  min-width: 220px;
+  flex: 1 1 200px;
+  /* min-width, not a flex-basis floor: 220px could not shrink on a small phone. */
+  min-width: 0;
 }
 
 .upload-progress-track {
@@ -728,6 +732,15 @@ input::placeholder {
   width: 100%;
   border-collapse: collapse;
   font-size: 14.5px;
+  /* Lets columns shrink to share the available width. Without it the padded cells set a
+     min-content floor that overflowed the page between 721px and 768px - above the point
+     where the table collapses to stacked rows, below where it comfortably fits. */
+  table-layout: fixed;
+}
+
+.transaction-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .transaction-table th,
@@ -754,6 +767,15 @@ input::placeholder {
 .transaction-table td:last-child,
 .transaction-table th:last-child {
   text-align: right;
+}
+
+/* Tablet band: the table is still a table here (it only stacks at 720px), so trim the
+   cell padding rather than let six padded columns push past the screen. */
+@media (max-width: 860px) {
+  .transaction-table th,
+  .transaction-table td {
+    padding: 10px 7px;
+  }
 }
 
 .amount-credit {
@@ -992,18 +1014,21 @@ input::placeholder {
 }
 
 /* Calendar left, summary right. The summary used to sit below the grid, where it was
-   reliably missed - the calendar alone fills the viewport. The rail is deliberately
-   narrow so the grid stays the thing you look at. */
+   reliably missed - the calendar alone fills the viewport. The rail stays narrower than
+   the grid so the calendar remains the thing you look at, but wide enough that real
+   merchant names ("Lovelysupermarket Zonnebloem") do not wrap to three lines. */
 .calendar-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) 330px;
   gap: 24px;
   align-items: start;
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  /* minmax(0, 1fr), not 1fr: plain 1fr floors each column at its content width, so the
+     amount text held the columns at ~60px and seven of them overflowed a 390px phone. */
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -1017,14 +1042,14 @@ input::placeholder {
 }
 
 .calendar-panel {
-  padding: 14px;
+  padding: 16px 18px;
   border: 1px solid var(--line);
   border-radius: 5px;
   background: var(--card);
 }
 
 .calendar-panel-title {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   font-size: 11px;
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
@@ -1042,7 +1067,7 @@ input::placeholder {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 11px;
 }
 
 .calendar-stats div {
@@ -1076,27 +1101,44 @@ input::placeholder {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  /* Long days scroll inside the rail instead of stretching it past the calendar. */
-  max-height: 320px;
+  gap: 12px;
+  /* Long days scroll inside the rail instead of stretching it past the calendar.
+     Padding keeps the scrollbar off the amounts. */
+  max-height: 340px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
+/* Merchant and amount share the top row; the category sits under the merchant only, so
+   the amount stays aligned to the right edge instead of being pushed to its own line. */
 .calendar-day-list li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 2px 8px;
+  column-gap: 10px;
+  row-gap: 2px;
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
 
 .calendar-day-list-merchant {
+  grid-column: 1;
   font-weight: 700;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
+.calendar-day-list li > span:last-child {
+  grid-column: 2;
+  grid-row: 1;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  white-space: nowrap;
+  text-align: right;
+}
+
 .calendar-day-list-meta {
-  grid-column: 1 / -1;
+  grid-column: 1;
+  grid-row: 2;
   font-size: 11px;
   color: var(--ink-50);
 }
@@ -1115,7 +1157,7 @@ input::placeholder {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 11px;
 }
 
 .calendar-breakdown-row {
@@ -1154,16 +1196,6 @@ input::placeholder {
   background: var(--forest);
 }
 
-@media (max-width: 860px) {
-  .calendar-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .calendar-side {
-    position: static;
-  }
-}
-
 .calendar-weekday {
   text-align: center;
   font-family: var(--font-mono);
@@ -1190,6 +1222,10 @@ input::placeholder {
   cursor: pointer;
   font-size: 12px;
   box-shadow: none;
+  /* Lets the cell shrink below its content width - without this the flex default of
+     min-width:auto puts the overflow straight back. */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-day:hover:not(:disabled) {
@@ -1220,6 +1256,106 @@ input::placeholder {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--ink-50);
+  /* Once the columns can shrink, a large amount has to clip rather than push the cell
+     wide again and reintroduce the overflow. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Calendar responsive ladder. These must stay at the end of the calendar section: the
+   base .calendar-day / .calendar-weekday rules are declared above, and equal-specificity
+   rules are decided by source order, so media queries placed earlier silently lose. */
+
+/* Laptops below the 1280px page cap: give the rail back some width to the grid so the
+   day squares do not get too small to read. */
+@media (max-width: 1180px) {
+  .calendar-layout {
+    grid-template-columns: minmax(0, 1fr) 290px;
+    gap: 18px;
+  }
+}
+
+/* Below this the grid and the rail cannot both hold their minimum comfortable width,
+   so stack them - summary first, since that is the part that was being missed. */
+@media (max-width: 980px) {
+  .calendar-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .calendar-side {
+    position: static;
+    /* Side by side while there is still room for two, rather than one tall column. */
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    align-items: start;
+  }
+
+  .calendar-day-list {
+    max-height: 260px;
+  }
+}
+
+@media (max-width: 720px) {
+  .calendar-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calendar-nav {
+    gap: 12px;
+  }
+
+  .calendar-nav h2 {
+    min-width: 0;
+    font-size: 20px;
+  }
+
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  /* Square cells stop working once seven columns share a phone width - the amount needs
+     the room more than the aspect ratio does. */
+  .calendar-day {
+    aspect-ratio: auto;
+    min-height: 52px;
+    padding: 5px 4px;
+    font-size: 11px;
+  }
+
+  .calendar-day-total {
+    font-size: 10px;
+  }
+
+  .calendar-weekday {
+    font-size: 9px;
+    letter-spacing: 0.04em;
+  }
+
+  .calendar-panel {
+    padding: 14px;
+  }
+
+  /* 32px of side padding costs a seventh of the width on a phone, and the grid needs it
+     more than the gutter does. Scoped to the calendar page only. */
+  .page--wide {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+/* Small phones: the day number and amount stop fitting side by side in a 40px cell. */
+@media (max-width: 400px) {
+  .calendar-day {
+    min-height: 46px;
+    padding: 4px 3px;
+  }
+
+  .calendar-day-total {
+    font-size: 9px;
+  }
 }
 
 /* ============================================================
