@@ -92,10 +92,32 @@ export function CalendarPage() {
     [calendar]
   );
 
+  // Derived from the days already fetched for the grid - no second request, and it can
+  // never disagree with what the squares show.
+  const monthSummary = useMemo(() => {
+    const days = calendar?.days ?? [];
+    if (!days.length) return null;
+    const spentDays = days.filter((d) => d.total > 0);
+    const total = spentDays.reduce((sum, d) => sum + d.total, 0);
+    const busiest = spentDays.reduce<CalendarDay | null>(
+      (top, d) => (!top || d.total > top.total ? d : top),
+      null
+    );
+    return {
+      total,
+      spentDayCount: spentDays.length,
+      zeroDayCount: days.length - spentDays.length,
+      // Averaged over days with spend, not all days - dividing by the full month would
+      // quietly understate the typical spending day.
+      averagePerSpentDay: spentDays.length ? total / spentDays.length : 0,
+      busiest,
+    };
+  }, [calendar]);
+
   return (
     <>
       <AppHeader active="calendar" />
-      <main className="page" id="main-content">
+      <main className="page page--wide" id="main-content">
         <h1>Calendar</h1>
 
       {error && <p className="form-error">{error}</p>}
@@ -113,56 +135,96 @@ export function CalendarPage() {
       {loading || !calendar ? (
         <p>Loading...</p>
       ) : (
-        <div className="calendar-grid">
-          {WEEKDAY_LABELS.map((label) => (
-            <div key={label} className="calendar-weekday">
-              {label}
-            </div>
-          ))}
-          {Array.from({ length: leadingBlanks }).map((_, i) => (
-            <div key={`blank-${i}`} className="calendar-day calendar-day--blank" />
-          ))}
-          {calendar.days.map((day) => {
-            const dayNumber = Number(day.date.split("-")[2]);
-            const intensity = day.total > 0 ? Math.min(0.32, Math.max(0.08, (day.total / maxDaySpend) * 0.32)) : 0;
-            return (
-              <button
-                key={day.date}
-                type="button"
-                className={`calendar-day${selectedDate === day.date ? " calendar-day--selected" : ""}`}
-                style={day.total > 0 ? { background: `rgba(18, 80, 58, ${intensity})` } : undefined}
-                onClick={() => void openDay(day.date)}
-              >
-                <span className="calendar-day-number">{dayNumber}</span>
-                <span className="calendar-day-total">{day.total > 0 ? `R${day.total.toFixed(0)}` : "-"}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+        <div className="calendar-layout">
+          <div className="calendar-grid">
+            {WEEKDAY_LABELS.map((label) => (
+              <div key={label} className="calendar-weekday">
+                {label}
+              </div>
+            ))}
+            {Array.from({ length: leadingBlanks }).map((_, i) => (
+              <div key={`blank-${i}`} className="calendar-day calendar-day--blank" />
+            ))}
+            {calendar.days.map((day) => {
+              const dayNumber = Number(day.date.split("-")[2]);
+              const intensity = day.total > 0 ? Math.min(0.32, Math.max(0.08, (day.total / maxDaySpend) * 0.32)) : 0;
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  className={`calendar-day${selectedDate === day.date ? " calendar-day--selected" : ""}`}
+                  style={day.total > 0 ? { background: `rgba(18, 80, 58, ${intensity})` } : undefined}
+                  onClick={() => void openDay(day.date)}
+                >
+                  <span className="calendar-day-number">{dayNumber}</span>
+                  <span className="calendar-day-total">{day.total > 0 ? `R${day.total.toFixed(0)}` : "-"}</span>
+                </button>
+              );
+            })}
+          </div>
 
-      {selectedDate && (
-        <section className="chart-card chart-card--wide">
-          <h2>{selectedDate}</h2>
-          {loadingDay ? (
-            <p>Loading...</p>
-          ) : dayTransactions.length === 0 ? (
-            <p className="recommendation-empty">
-              Nothing spent this day. A zero-spend day is a real result, not missing data.
-            </p>
-          ) : (
-            <ul className="recommendation-list">
-              {dayTransactions.map((t) => (
-                <li key={t.id}>
-                  <strong>{t.merchant}</strong> - {t.category ?? "Uncategorized"} -{" "}
-                  <span className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
-                    {t.direction === "CREDIT" ? "+" : ""}R{t.amount.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          <aside className="calendar-side">
+            {monthSummary && (
+              <section className="calendar-panel">
+                <h2 className="calendar-panel-title">This month</h2>
+                <dl className="calendar-stats">
+                  <div>
+                    <dt>Total spent</dt>
+                    <dd className="calendar-stat-lead">R{monthSummary.total.toFixed(2)}</dd>
+                  </div>
+                  <div>
+                    <dt>Days with spending</dt>
+                    <dd>{monthSummary.spentDayCount}</dd>
+                  </div>
+                  <div>
+                    <dt>No-spend days</dt>
+                    <dd>{monthSummary.zeroDayCount}</dd>
+                  </div>
+                  <div>
+                    <dt>Average spending day</dt>
+                    <dd>R{monthSummary.averagePerSpentDay.toFixed(2)}</dd>
+                  </div>
+                  {monthSummary.busiest && (
+                    <div>
+                      <dt>Busiest day</dt>
+                      <dd>
+                        {Number(monthSummary.busiest.date.split("-")[2])} - R
+                        {monthSummary.busiest.total.toFixed(2)}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </section>
+            )}
+
+            <section className="calendar-panel">
+              <h2 className="calendar-panel-title">
+                {selectedDate ? selectedDate : "Day detail"}
+              </h2>
+              {!selectedDate ? (
+                <p className="calendar-panel-hint">Select a day to see what was spent.</p>
+              ) : loadingDay ? (
+                <p className="calendar-panel-hint">Loading...</p>
+              ) : dayTransactions.length === 0 ? (
+                <p className="calendar-panel-hint">
+                  Nothing spent this day. A zero-spend day is a real result, not missing data.
+                </p>
+              ) : (
+                <ul className="calendar-day-list">
+                  {dayTransactions.map((t) => (
+                    <li key={t.id}>
+                      <span className="calendar-day-list-merchant">{t.merchant}</span>
+                      <span className="calendar-day-list-meta">{t.category ?? "Uncategorized"}</span>
+                      <span className={t.direction === "CREDIT" ? "amount-credit" : undefined}>
+                        {t.direction === "CREDIT" ? "+" : ""}R{t.amount.toFixed(2)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </aside>
+        </div>
       )}
       </main>
     </>
