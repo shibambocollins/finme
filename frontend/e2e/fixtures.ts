@@ -250,7 +250,16 @@ export async function gotoAuthenticated(page: Page, path: string, options: MockO
 }
 
 export async function gotoCalendarAuthenticated(page: Page, options: MockOptions = {}) {
-  await gotoAuthenticated(page, "/calendar", options);
+  // The calendar queries /api/transactions?from=&to= for a single day, so it gets the
+  // day-scoped rows rather than the dashboard's whole-month list. Prepended, so a test's
+  // own override still wins.
+  await gotoAuthenticated(page, "/calendar", {
+    ...options,
+    overrides: [
+      [`${API}/api/transactions**`, (route: Route) => route.fulfill({ json: DAY_TRANSACTIONS })],
+      ...(options.overrides ?? []),
+    ],
+  });
   await page.waitForSelector(".calendar-grid");
 }
 
