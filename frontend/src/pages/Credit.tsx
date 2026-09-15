@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostJson, apiPut, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { formatTimestamp } from "../utils/dates";
 
 type PaymentStatus = "ON_TIME" | "LATE" | "DEFAULTED" | "UNKNOWN";
 
@@ -266,7 +267,7 @@ export function Credit() {
               </span>
               {profile.scoreRecordedAt && (
                 <span className="stat-label">
-                  Recorded {new Date(profile.scoreRecordedAt).toLocaleDateString()}
+                  Recorded {formatTimestamp(profile.scoreRecordedAt)}
                 </span>
               )}
             </div>
@@ -451,7 +452,7 @@ export function Credit() {
               <p className="stat-value">{comparison.message}</p>
               <p className="recommendation-empty">
                 {comparison.previousScore} on{" "}
-                {new Date(comparison.previousRecordedAt as string).toLocaleDateString()} &rarr;{" "}
+                {formatTimestamp(comparison.previousRecordedAt)} &rarr;{" "}
                 {comparison.currentScore} now
               </p>
             </section>
