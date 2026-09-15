@@ -53,7 +53,8 @@ interface BankStatementResponse {
 interface ReceiptResponse {
   id: number;
   uploadDate: string;
-  status: string;
+  status: "PROCESSING" | "COMPLETE" | "FAILED";
+  failureReason: string | null;
 }
 
 interface DashboardSummary {
@@ -361,6 +362,23 @@ export function Dashboard() {
     throw new ApiError(504, "Statement is taking longer than expected - check back shortly");
   };
 
+  /**
+   * Receipt extraction moved to the background, so the upload response no longer carries the
+   * outcome - it only says the file was accepted. Shorter deadline than the statement poll:
+   * a receipt is a single vision call, not a chunked document paced around rate limits.
+   */
+  const pollReceiptUntilSettled = async (receiptId: number): Promise<ReceiptResponse> => {
+    const deadline = Date.now() + 3 * 60 * 1000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const receipt = await apiGet<ReceiptResponse>(`/api/receipts/${receiptId}`, token);
+      if (receipt.status !== "PROCESSING") {
+        return receipt;
+      }
+    }
+    throw new ApiError(504, "Receipt is taking longer than expected - check back shortly");
+  };
+
   const handleReceiptFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -370,8 +388,14 @@ export function Dashboard() {
     try {
       const form = new FormData();
       form.append("file", file);
-      await apiPostForm<ReceiptResponse>("/api/receipts", form, token);
-      await loadDashboard();
+      const accepted = await apiPostForm<ReceiptResponse>("/api/receipts", form, token);
+      const settled = await pollReceiptUntilSettled(accepted.id);
+
+      if (settled.status === "FAILED") {
+        setError(settled.failureReason ?? "Receipt processing failed");
+      } else {
+        await loadDashboard();
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Receipt upload failed");
     } finally {

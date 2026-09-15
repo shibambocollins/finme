@@ -253,6 +253,77 @@ test.describe("Statement upload", () => {
   });
 });
 
+test.describe("Receipt upload", () => {
+  const accepted = {
+    id: 5,
+    uploadDate: "2026-08-20T10:00:00Z",
+    status: "PROCESSING",
+    failureReason: null,
+  };
+
+  test("uploads, polls until complete, then reloads the ledger", async ({ page }) => {
+    await gotoAuthenticated(page, "/dashboard", {
+      overrides: [
+        [
+          `${API}/api/receipts`,
+          (route) =>
+            route.request().method() === "POST"
+              ? route.fulfill({ status: 202, json: accepted })
+              : route.fulfill({ json: [] }),
+        ],
+        [
+          `${API}/api/receipts/*`,
+          (route) => route.fulfill({ json: { ...accepted, status: "COMPLETE" } }),
+        ],
+      ],
+    });
+
+    await page.locator('input[type="file"]').nth(1).setInputFiles({
+      name: "receipt.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+    });
+
+    await expect(page.locator(".form-error")).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByText(TRANSACTIONS[0].merchant).first()).toBeVisible();
+  });
+
+  test("surfaces the reason when extraction fails in the background", async ({ page }) => {
+    await gotoAuthenticated(page, "/dashboard", {
+      overrides: [
+        [
+          `${API}/api/receipts`,
+          (route) =>
+            route.request().method() === "POST"
+              ? route.fulfill({ status: 202, json: accepted })
+              : route.fulfill({ json: [] }),
+        ],
+        [
+          `${API}/api/receipts/*`,
+          (route) =>
+            route.fulfill({
+              json: {
+                ...accepted,
+                status: "FAILED",
+                failureReason: "No purchase found in that image.",
+              },
+            }),
+        ],
+      ],
+    });
+
+    await page.locator('input[type="file"]').nth(1).setInputFiles({
+      name: "receipt.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
+    });
+
+    // The upload response can no longer carry the reason, so polling is the only way the
+    // user learns why - if this regresses they get a silent no-op.
+    await expect(page.getByText(/No purchase found/i)).toBeVisible({ timeout: 15_000 });
+  });
+});
+
 test.describe("Budgets", () => {
   test("lists each budget with its category and limit", async ({ page }) => {
     await gotoAuthenticated(page, "/budgets");

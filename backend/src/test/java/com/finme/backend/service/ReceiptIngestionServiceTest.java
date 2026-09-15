@@ -18,6 +18,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,22 +43,23 @@ class ReceiptIngestionServiceTest {
         return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", TestImages.jpeg());
     }
 
+    private final List<Receipt> savedReceipts = new ArrayList<>();
+
     private void stubReceiptSaveAssignsId(Long id) {
         when(receiptRepository.save(any(Receipt.class))).thenAnswer(invocation -> {
             Receipt receipt = invocation.getArgument(0);
             if (receipt.getId() == null) {
                 receipt.setId(id);
+                receipt.setUserId(1L);
             }
+            savedReceipts.add(receipt);
             return receipt;
         });
         // process() re-reads the row rather than trusting the instance ingest() saved, since in
-        // production it runs on another thread entirely.
-        when(receiptRepository.findById(id)).thenAnswer(invocation -> {
-            Receipt receipt = new Receipt();
-            receipt.setId(id);
-            receipt.setUserId(1L);
-            return Optional.of(receipt);
-        });
+        // production it runs on another thread. Returning the same instance the save stub has
+        // been handed keeps the fake behaving like a real store, where both calls see one row.
+        when(receiptRepository.findById(id)).thenAnswer(invocation ->
+                Optional.of(savedReceipts.isEmpty() ? new Receipt() : savedReceipts.get(savedReceipts.size() - 1)));
     }
 
     @Test
@@ -69,7 +71,12 @@ class ReceiptIngestionServiceTest {
 
         Receipt result = receiptIngestionService.ingest(1L, jpegFile());
 
-        assertThat(result.getStatus()).isEqualTo(ReceiptStatus.COMPLETE);
+        // ingest() hands the vision call to the background and returns immediately, so the
+        // row it returns is still PROCESSING - that is the point of the change. COMPLETE is
+        // asserted on the persisted row, which the background task is what updates.
+        assertThat(result.getId()).isEqualTo(7L);
+        assertThat(savedReceipts.get(savedReceipts.size() - 1).getStatus())
+                .isEqualTo(ReceiptStatus.COMPLETE);
 
         ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
         verify(transactionRepository).save(captor.capture());
@@ -102,18 +109,20 @@ class ReceiptIngestionServiceTest {
     }
 
     @Test
-    void marksReceiptFailedAndThrowsWhenAllVisionProvidersFail() {
+    void recordsFailureOnTheRowWithAReasonWhenAllVisionProvidersFail() {
         stubReceiptSaveAssignsId(9L);
         RuntimeException cause = new RuntimeException("boom");
         when(visionAiProvider.extractFromImage(any(), any()))
                 .thenThrow(new AllAiProvidersFailedException(cause));
 
-        assertThatThrownBy(() -> receiptIngestionService.ingest(1L, jpegFile()))
-                .isInstanceOf(ReceiptProcessingException.class);
+        // No longer throws: the caller is a background thread with nobody waiting on it, so a
+        // thrown exception would vanish into the executor. The row carries the outcome now,
+        // and failureReason is the only way the user ever finds out why.
+        receiptIngestionService.ingest(1L, jpegFile());
 
-        ArgumentCaptor<Receipt> captor = ArgumentCaptor.forClass(Receipt.class);
-        verify(receiptRepository, times(2)).save(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(ReceiptStatus.FAILED);
+        Receipt stored = savedReceipts.get(savedReceipts.size() - 1);
+        assertThat(stored.getStatus()).isEqualTo(ReceiptStatus.FAILED);
+        assertThat(stored.getFailureReason()).isNotBlank();
         verify(transactionRepository, never()).save(any());
     }
 }
