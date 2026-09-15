@@ -14,6 +14,7 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import { apiDelete, apiGet, apiPostForm, apiPostJson, apiPut, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
+import { WelcomeBanner } from "../components/WelcomeBanner";
 import { SUGGESTED_CATEGORIES } from "../constants/categories";
 import { downloadCsv } from "../utils/csv";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
@@ -104,7 +105,7 @@ const editFormFrom = (t: Transaction): TransactionEditForm => ({
 
 export function Dashboard() {
   useDocumentTitle("Dashboard | FinMe");
-  const { token } = useAuth();
+  const { token, email, displayName } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [insights, setInsights] = useState<RecommendationsResponse | null>(null);
@@ -436,6 +437,11 @@ export function Dashboard() {
     <>
       <AppHeader active="dashboard" />
       <main className="page" id="main-content">
+      <WelcomeBanner
+        email={email}
+        displayName={displayName}
+        hasTransactions={transactions.length > 0}
+      />
       <section className="upload-section">
         <div>
           <label className="upload-button">

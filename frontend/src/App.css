@@ -595,6 +595,60 @@ input::placeholder {
    Upload section
    ============================================================ */
 
+/* ============================================================
+   Welcome banner - acknowledges the sign-in before the data
+   screen starts. Dismissible, and quiet enough not to compete
+   with the dashboard itself.
+   ============================================================ */
+
+.welcome-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--forest-border);
+  border-radius: 7px;
+  background: var(--forest-wash);
+}
+
+.welcome-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 14px;
+}
+
+.welcome-banner__text strong {
+  color: var(--forest);
+  font-size: 15px;
+}
+
+.welcome-banner__text span {
+  color: var(--ink-60);
+}
+
+.welcome-banner__close {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-50);
+  font-size: 19px;
+  line-height: 1;
+}
+
+.welcome-banner__close:hover:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  color: var(--ink);
+}
+
 .upload-section {
   margin-bottom: 32px;
   display: flex;
