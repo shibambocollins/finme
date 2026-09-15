@@ -80,6 +80,37 @@ test.describe("Dashboard", () => {
   });
 });
 
+test.describe("Welcome banner", () => {
+  // Each test needs its own browser context: the banner decides new-vs-returning from
+  // localStorage, and a context shared across tests would carry that decision between them.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("greets a first-time visitor by name and points at the first step", async ({ page }) => {
+    await gotoAuthenticated(page, "/dashboard");
+
+    const banner = page.locator(".welcome-banner");
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("Welcome to FinMe, Collins");
+    await expect(banner).toContainText(/bank statement/i);
+  });
+
+  test("greets a returning visitor differently on the second visit", async ({ page }) => {
+    await gotoAuthenticated(page, "/dashboard");
+    await expect(page.locator(".welcome-banner")).toContainText("Welcome to FinMe");
+
+    // Same browser, same account - the second arrival is what "welcome back" means here.
+    await page.reload();
+    await expect(page.locator(".welcome-banner")).toContainText("Welcome back, Collins");
+  });
+
+  test("can be dismissed", async ({ page }) => {
+    await gotoAuthenticated(page, "/dashboard");
+
+    await page.locator(".welcome-banner__close").click();
+    await expect(page.locator(".welcome-banner")).toHaveCount(0);
+  });
+});
+
 test.describe("Statement upload", () => {
   test("uploads, polls until complete, then shows the extracted transactions", async ({ page }) => {
     const settled = {
