@@ -30,6 +30,17 @@ test.describe("Dashboard", () => {
     await expect(page.locator(".amount-credit").first()).toBeVisible();
   });
 
+  test("renders dates in South African dd/mm/yyyy, not ISO or US order", async ({ page }) => {
+    await gotoAuthenticated(page, "/dashboard");
+
+    // Fixture date is 2026-08-04. SA reads 04/08/2026; US order would give 08/04/2026, and
+    // the raw wire format would leak 2026-08-04 straight into the table.
+    const table = page.locator(".transaction-table");
+    await expect(table).toContainText("04/08/2026");
+    await expect(table).not.toContainText("2026-08-04");
+    await expect(table).not.toContainText("08/04/2026");
+  });
+
   test("shows the spend summary", async ({ page }) => {
     await gotoAuthenticated(page, "/dashboard");
 

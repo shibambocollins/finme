@@ -27,16 +27,21 @@ function parseIsoDate(iso: string): Date | null {
   return new Date(Number(year), Number(month) - 1, Number(day));
 }
 
-/** "2026-08-04" -> "04/08/2026". Falls back to the raw value rather than rendering junk. */
+/**
+ * "2026-08-04" -> "04/08/2026". Falls back to the raw value rather than rendering junk.
+ *
+ * Built by hand rather than via toLocaleDateString("en-ZA"): Chromium's en-ZA numeric
+ * format is yyyy/MM/dd ("2026/08/04"), which is not what South Africans write. The
+ * conventional form is day-first, so it is spelled out here instead of trusting the
+ * locale data to agree.
+ */
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return "-";
   const date = parseIsoDate(iso);
   if (!date || Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(LOCALE, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
 }
 
 /** "2026-08-04" -> "04 August 2026", for headings where the long form reads better. */
@@ -51,14 +56,16 @@ export function formatDateLong(iso: string | null | undefined): string {
   });
 }
 
-/** For timestamps the API returns as full ISO instants, not plain dates. */
+/**
+ * For timestamps the API returns as full ISO instants, not plain dates. Parsed by Date
+ * (correct here - an instant carries its own zone) then rendered day-first to match
+ * {@link formatDate}.
+ */
 export function formatTimestamp(iso: string | null | undefined): string {
   if (!iso) return "-";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(LOCALE, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}/${month}/${date.getFullYear()}`;
 }
