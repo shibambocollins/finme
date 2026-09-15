@@ -17,6 +17,7 @@ import { AppHeader } from "../components/AppHeader";
 import { WelcomeBanner } from "../components/WelcomeBanner";
 import { SUGGESTED_CATEGORIES } from "../constants/categories";
 import { downloadCsv } from "../utils/csv";
+import { formatDate } from "../utils/dates";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 
 type Direction = "DEBIT" | "CREDIT";
@@ -417,7 +418,7 @@ export function Dashboard() {
   };
 
   const deleteTransaction = async (t: Transaction) => {
-    if (!window.confirm(`Delete this transaction? "${t.merchant}" R${t.amount.toFixed(2)} on ${t.date}.`)) {
+    if (!window.confirm(`Delete this transaction? "${t.merchant}" R${t.amount.toFixed(2)} on ${formatDate(t.date)}.`)) {
       return;
     }
     setError(null);
@@ -743,7 +744,7 @@ export function Dashboard() {
             <tbody>
               {pagedTransactions.map((t) => (
                 <tr key={t.id} className={editingId === t.id ? "editing-row" : undefined}>
-                  <td data-label="Date">{t.date}</td>
+                  <td data-label="Date">{formatDate(t.date)}</td>
                   <td data-label="Merchant">{t.merchant}</td>
                   <td data-label="Category">{t.category ?? "-"}</td>
                   <td data-label="Description">{t.description ?? "-"}</td>
