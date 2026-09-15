@@ -87,7 +87,14 @@ class DocumentValidationTest {
             }
             return r;
         });
-        return new ReceiptIngestionService(receiptRepository, transactionRepository, visionAiProvider);
+        when(receiptRepository.findById(1L)).thenAnswer(i -> {
+            Receipt r = new Receipt();
+            r.setId(1L);
+            r.setUserId(1L);
+            return Optional.of(r);
+        });
+        return new ReceiptIngestionService(receiptRepository, transactionRepository, visionAiProvider,
+                new InlineBackgroundRunner());
     }
 
     private static byte[] pdfWithNoText() throws IOException {

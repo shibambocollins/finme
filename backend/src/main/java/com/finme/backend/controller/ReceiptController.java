@@ -8,6 +8,8 @@ import com.finme.backend.service.ReceiptIngestionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,6 +45,14 @@ public class ReceiptController {
         }
 
         Receipt receipt = receiptIngestionService.ingest(authenticatedUser.currentUserId(), file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ReceiptResponse.from(receipt));
+        // 202, not 201: the row exists but the vision extraction has not run yet. Saying
+        // "created" would claim work that has not happened, and the client has to poll.
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(ReceiptResponse.from(receipt));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ReceiptResponse> status(@PathVariable Long id) {
+        Receipt receipt = receiptIngestionService.getForUser(authenticatedUser.currentUserId(), id);
+        return ResponseEntity.ok(ReceiptResponse.from(receipt));
     }
 }

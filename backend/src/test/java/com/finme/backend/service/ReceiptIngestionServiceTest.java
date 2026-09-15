@@ -36,7 +36,7 @@ class ReceiptIngestionServiceTest {
     private final TransactionRepository transactionRepository = mock(TransactionRepository.class);
     private final VisionAiProvider visionAiProvider = mock(VisionAiProvider.class);
     private final ReceiptIngestionService receiptIngestionService = new ReceiptIngestionService(
-            receiptRepository, transactionRepository, visionAiProvider);
+            receiptRepository, transactionRepository, visionAiProvider, new InlineBackgroundRunner());
 
     private static MockMultipartFile jpegFile() {
         return new MockMultipartFile("file", "receipt.jpg", "image/jpeg", TestImages.jpeg());
@@ -49,6 +49,14 @@ class ReceiptIngestionServiceTest {
                 receipt.setId(id);
             }
             return receipt;
+        });
+        // process() re-reads the row rather than trusting the instance ingest() saved, since in
+        // production it runs on another thread entirely.
+        when(receiptRepository.findById(id)).thenAnswer(invocation -> {
+            Receipt receipt = new Receipt();
+            receipt.setId(id);
+            receipt.setUserId(1L);
+            return Optional.of(receipt);
         });
     }
 

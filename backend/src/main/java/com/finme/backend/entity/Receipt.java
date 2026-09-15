@@ -34,4 +34,7 @@ public class Receipt {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ReceiptStatus status = ReceiptStatus.PROCESSING;
+
+    @Column(name = "failure_reason", length = 512)
+    private String failureReason;
 }
