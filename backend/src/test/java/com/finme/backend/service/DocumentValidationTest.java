@@ -176,10 +176,13 @@ class DocumentValidationTest {
         MockMultipartFile photo = new MockMultipartFile(
                 "file", "receipt.jpg", "image/jpeg", TestImages.jpeg());
 
-        assertThatThrownBy(() -> receiptService().ingest(1L, photo))
-                .isInstanceOf(UnrecognisedDocumentException.class)
-                .hasMessageContaining("does not look like a receipt");
+        // Extraction runs in the background now, so "not a receipt" is recorded on the row
+        // instead of thrown - by the time it is known, nobody is waiting on the call.
+        receiptService().ingest(1L, photo);
 
+        ArgumentCaptor<Receipt> captor = ArgumentCaptor.forClass(Receipt.class);
+        verify(receiptRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getValue().getFailureReason()).contains("does not look like a receipt");
         verify(transactionRepository, never()).save(any());
     }
 
@@ -189,8 +192,7 @@ class DocumentValidationTest {
         MockMultipartFile photo = new MockMultipartFile(
                 "file", "receipt.jpg", "image/jpeg", TestImages.jpeg());
 
-        assertThatThrownBy(() -> receiptService().ingest(1L, photo))
-                .isInstanceOf(UnrecognisedDocumentException.class);
+        receiptService().ingest(1L, photo);
 
         ArgumentCaptor<Receipt> captor = ArgumentCaptor.forClass(Receipt.class);
         verify(receiptRepository, atLeastOnce()).save(captor.capture());
@@ -205,6 +207,12 @@ class DocumentValidationTest {
         MockMultipartFile png = new MockMultipartFile(
                 "file", "receipt.png", "image/png", TestImages.png());
 
-        assertThat(receiptService().ingest(1L, png).getStatus()).isEqualTo(ReceiptStatus.COMPLETE);
+        // ingest() returns while extraction is still queued, so COMPLETE is asserted on what
+        // was persisted rather than on the row handed straight back.
+        receiptService().ingest(1L, png);
+
+        ArgumentCaptor<Receipt> captor = ArgumentCaptor.forClass(Receipt.class);
+        verify(receiptRepository, atLeastOnce()).save(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(ReceiptStatus.COMPLETE);
     }
 }

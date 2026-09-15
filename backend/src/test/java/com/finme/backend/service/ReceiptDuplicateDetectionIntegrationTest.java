@@ -5,12 +5,14 @@ import com.finme.backend.ai.ExtractedTransaction;
 import com.finme.backend.ai.VisionAiProvider;
 import com.finme.backend.entity.PaymentMethod;
 import com.finme.backend.entity.Receipt;
+import com.finme.backend.entity.ReceiptStatus;
 import com.finme.backend.entity.SourceType;
 import com.finme.backend.entity.Transaction;
 import com.finme.backend.entity.TransactionStatus;
 import com.finme.backend.entity.BankStatement;
 import com.finme.backend.entity.StatementStatus;
 import com.finme.backend.repository.BankStatementRepository;
+import com.finme.backend.repository.ReceiptRepository;
 import com.finme.backend.repository.TransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +58,26 @@ class ReceiptDuplicateDetectionIntegrationTest {
         }
         throw new AssertionError("Statement " + statementId + " was still PROCESSING after 30s");
     }
+
+    /**
+     * Receipt extraction is asynchronous too, so the transactions it writes do not exist yet
+     * when ingest() returns. Polling the row is what makes the assertions below deterministic
+     * rather than a race against the executor.
+     */
+    private Receipt awaitReceiptSettled(Long receiptId) throws InterruptedException {
+        long deadline = System.currentTimeMillis() + 30_000;
+        while (System.currentTimeMillis() < deadline) {
+            Receipt receipt = receiptRepository.findById(receiptId).orElseThrow();
+            if (receipt.getStatus() != ReceiptStatus.PROCESSING) {
+                return receipt;
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("Receipt " + receiptId + " was still PROCESSING after 30s");
+    }
+
+    @Autowired
+    private ReceiptRepository receiptRepository;
 
     @Autowired
     private ReceiptIngestionService receiptIngestionService;
@@ -127,7 +149,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
 
         scriptedVisionAiProvider.willReturn(new ExtractedTransaction(
                 receiptDate, "Woolworths", new BigDecimal("450.00"), "Groceries", "receipt", "CARD"));
-        Receipt receipt = receiptIngestionService.ingest(userId, jpegFile());
+        Receipt receipt = awaitReceiptSettled(receiptIngestionService.ingest(userId, jpegFile()).getId());
 
         List<Transaction> afterReceipt =
                 transactionRepository.findByUserIdAndStatusOrderByDateDesc(userId, TransactionStatus.ACTIVE);
@@ -158,7 +180,7 @@ class ReceiptDuplicateDetectionIntegrationTest {
 
         scriptedVisionAiProvider.willReturn(new ExtractedTransaction(
                 receiptDate, "Corner Cafe", new BigDecimal("65.00"), "Dining", "receipt", "CASH"));
-        receiptIngestionService.ingest(userId, jpegFile());
+        awaitReceiptSettled(receiptIngestionService.ingest(userId, jpegFile()).getId());
         Transaction receiptTransaction = transactionRepository
                 .findByUserIdAndStatusOrderByDateDesc(userId, TransactionStatus.ACTIVE).get(0);
         assertThat(receiptTransaction.getPaymentMethod()).isEqualTo(PaymentMethod.CASH);
