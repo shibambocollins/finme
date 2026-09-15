@@ -253,6 +253,9 @@ export function Dashboard() {
       `finme-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
       ["Date", "Merchant", "Category", "Description", "Amount", "Direction", "Source", "Payment Method"],
       visibleTransactions.map((t) => [
+        // Left as ISO on purpose, unlike the on-screen table: yyyy-MM-dd sorts correctly as
+        // text and is unambiguous, where 04/08/2026 is read as 8 April by a spreadsheet set
+        // to a US locale. Display format and interchange format are not the same decision.
         t.date,
         t.merchant,
         t.category ?? "",

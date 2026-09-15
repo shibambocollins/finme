@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import { apiGet, ApiError } from "../api/client";
 import { AppHeader } from "../components/AppHeader";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { formatDateLong } from "../utils/dates";
 
 interface CalendarDay {
   date: string;
@@ -218,7 +219,7 @@ export function CalendarPage() {
 
             <section className="calendar-panel">
               <h2 className="calendar-panel-title">
-                {selectedDate ? selectedDate : "Day detail"}
+                {selectedDate ? formatDateLong(selectedDate) : "Day detail"}
               </h2>
               {!selectedDate ? (
                 <p className="calendar-panel-hint">Select a day to see what was spent.</p>
