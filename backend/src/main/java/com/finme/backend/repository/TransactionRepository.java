@@ -14,7 +14,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     List<Transaction> findByUserIdAndStatusOrderByDateDesc(Long userId, TransactionStatus status);
 
-    /** Duplicate-detection lookup (docs/03-system-design.md): card-payment receipt-sourced
+    /** Duplicate-detection lookup (docs/development/architecture.md): card-payment receipt-sourced
      *  transactions only - never cash - within a date window, exact amount match. */
     List<Transaction> findByUserIdAndSourceTypeAndPaymentMethodAndStatusAndAmountAndDateBetween(
             Long userId,
