@@ -10,3 +10,8 @@ AGENTS.md
 # JVM crash artifacts - diagnostic output from whatever process crashed
 hs_err_pid*.log
 replay_pid*.log
+
+# VitePress build output and cache - generated from docs/*.md, never edited by hand.
+node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
