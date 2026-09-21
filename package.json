@@ -1,0 +1,14 @@
+{
+  "name": "finme-docs",
+  "private": true,
+  "type": "module",
+  "description": "Documentation site for FinMe. The Markdown in docs/ is the source of truth; this only renders it.",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
