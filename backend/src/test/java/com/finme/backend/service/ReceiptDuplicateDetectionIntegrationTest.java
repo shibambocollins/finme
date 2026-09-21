@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Exercises ReceiptIngestionService, StatementIngestionService and DuplicateDetectionService
  * together against a real H2 database - the "receipt uploaded now, statement confirms it later"
- * flow from docs/04-product-backlog.md Iteration 4. Neither of the two existing tests covers
+ * flow from docs/product/roadmap.md. Neither of the two existing tests covers
  * this path together: DuplicateDetectionServiceTest mocks the repository in isolation, and
  * StatementIngestionIntegrationTest stubs the vision provider out entirely.
  */
