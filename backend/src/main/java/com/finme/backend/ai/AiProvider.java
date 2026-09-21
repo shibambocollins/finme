@@ -4,7 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * AI Integration Layer boundary (docs/03-system-design.md Sec. 2). Every real-data code path
+ * AI Integration Layer boundary (docs/development/architecture.md). Every real-data code path
  * goes through an implementation of this interface, never a direct provider SDK call from
  * business logic - that's what keeps provider swaps and fallback ordering confined to one place.
  */
