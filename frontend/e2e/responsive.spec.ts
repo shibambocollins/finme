@@ -39,10 +39,7 @@ for (const { name, path } of PAGES) {
       await page.setViewportSize(VIEWPORTS.phone);
       await gotoAuthenticated(page, path);
 
-      // h1 or h2: Dashboard currently starts at h2 with no h1 at all. That is worth
-      // fixing for accessibility, but it is a document-outline issue rather than a
-      // layout one, so this asserts what every page does have.
-      const heading = page.locator("main :is(h1, h2)").first();
+      const heading = page.locator("main h1").first();
       await expect(heading).toBeVisible();
       const box = await heading.boundingBox();
       expect(box!.width).toBeLessThanOrEqual(VIEWPORTS.phone.width);

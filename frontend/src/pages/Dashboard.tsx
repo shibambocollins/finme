@@ -465,6 +465,9 @@ export function Dashboard() {
     <>
       <AppHeader active="dashboard" />
       <main className="page" id="main-content">
+      {/* Every other page opens with an h1; this one started at h2, leaving the document
+          outline headless and a screen reader with nothing naming the page. */}
+      <h1 className="page-title">Dashboard</h1>
       <WelcomeBanner
         email={email}
         displayName={displayName}
