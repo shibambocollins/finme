@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * docs/03-system-design.md: on ingestion of a new statement transaction, check card-payment
+ * docs/development/architecture.md: on ingestion of a new statement transaction, check card-payment
  * receipt-sourced transactions for the same user within a date window for an exact amount
  * match; on match, flag the receipt-sourced record SUPERSEDED and keep the statement record
  * authoritative. Never runs against cash-sourced transactions - enforced here by only ever
@@ -25,7 +25,7 @@ import java.util.List;
 @Service
 public class DuplicateDetectionService {
 
-    // Tunable assumption, not derived from a spec value - docs/06-risk-register.md R4 already
+    // Tunable assumption, not derived from a spec value - docs/development/risks.md already
     // accepts false-positive/negative edge cases here as a known limitation.
     private static final int DATE_WINDOW_DAYS = 3;
 

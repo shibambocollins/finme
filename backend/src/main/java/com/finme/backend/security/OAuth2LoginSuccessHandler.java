@@ -16,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Bridges a completed Google OAuth2 login into the same JWT scheme AuthService issues for
- * password login (docs/03-system-design.md). Redirect-based, not JSON, since this handler
+ * password login (docs/development/architecture.md). Redirect-based, not JSON, since this handler
  * runs at the tail of a full-page browser redirect chain (Google -> backend callback), not an
  * API call the SPA made directly.
  */

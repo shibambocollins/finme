@@ -121,7 +121,7 @@ public class AuthService {
     }
 
     /**
-     * Google OAuth login (docs/03-system-design.md: "both paths converge on the same token
+     * Google OAuth login (docs/development/architecture.md: "both paths converge on the same token
      * scheme"). Matched by email - an existing password-registered account is authenticated
      * into directly, not duplicated; a first-time OAuth login creates a User with no password
      * hash. Google has already proven ownership of the email, so the account is verified
