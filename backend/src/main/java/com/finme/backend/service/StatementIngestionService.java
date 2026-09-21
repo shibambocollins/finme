@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Statement Upload Flow (docs/03-system-design.md Sec. 4): extract locally -> redact -> AI
+ * Statement Upload Flow (docs/development/architecture.md): extract locally -> redact -> AI
  * structuring/categorization -> persist -> check each new transaction against existing
  * receipt-sourced transactions for a duplicate.
  * <p>

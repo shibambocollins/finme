@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Receipt Upload Flow (docs/03-system-design.md Sec. 4): straight from upload to a
+ * Receipt Upload Flow (docs/development/architecture.md): straight from upload to a
  * vision-capable AI call - no local extraction step (there's no text layer in a photo) and no
  * redaction pass (see the plan's Context note: a deliberate, risk-accepted gap, confirmed with
  * Collins, not an oversight). Only ingestion path in the app that sends raw external input to

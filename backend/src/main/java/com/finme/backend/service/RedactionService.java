@@ -8,9 +8,9 @@ import java.util.regex.Pattern;
  * Baseline redaction pass (FR-1.3.1, FR-1.3.2): strips lines carrying account/ID/identity
  * labels and any stray long digit run (account numbers, phone numbers, branch codes) before
  * extracted statement text is built into an AI prompt. This is the regex/heuristic baseline
- * documented in docs/07-tech-stack.md - NER-based name redaction is an explicit future
+ * documented in docs/development/architecture.md - NER-based name redaction is an explicit future
  * improvement, not a v1 requirement. Enforced here, at the ingestion boundary, not left to
- * provider-side data-retention settings (docs/03-system-design.md Sec. 6).
+ * provider-side data-retention settings (docs/decisions/ADR-002-redaction-before-ai-calls.md).
  */
 @Service
 public class RedactionService {
@@ -32,7 +32,7 @@ public class RedactionService {
     // R12,450.00) use slashes/periods/commas as separators, not spaces or dashes, so those
     // stay intact. Known limitation: a space-grouped amount of R10,000,000+ could still be
     // over-redacted - an accepted heuristic tradeoff, same as the duplicate-detection edge
-    // case in docs/06-risk-register.md.
+    // case in docs/development/risks.md.
     private static final Pattern LONG_DIGIT_RUN = Pattern.compile("\\b\\d(?:[\\s-]?\\d){7,}\\b");
 
     public String redact(String rawText) {
